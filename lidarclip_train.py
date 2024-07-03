@@ -110,8 +110,6 @@ def train(
         dataset_name=dataset_name,
     )
 
-    # wandb_id = None
-    # wand_resume = False
     model = LidarClip(
         lidar_encoder,
         # clip_model,
@@ -119,9 +117,6 @@ def train(
         len(train_loader) / devices,
         loss_function
     )
-    # if len(checkpoint_path) and resume_wandb_logging:
-    #     wandb_id = checkpoint_path.split("/")[-2]
-    #     wand_resume = "must"
 
     if len(checkpoint_path) and load_only_model:
         model = LidarClip.load_from_checkpoint(
@@ -137,17 +132,6 @@ def train(
     elif len(checkpoint_path) == 0:
         checkpoint_path = None
 
-    # wandb_logger = WandbLogger(
-    #     project="lidar-clippin",
-    #     entity="agp",
-    #     name=name,
-    #     resume=wand_resume,
-    #     id=wandb_id,
-    #     allow_val_change=True,
-    # )
-
-    # if checkpoint_save_dir:
-    #     checkpoint_save_dir = os.path.join(checkpoint_save_dir, str(wandb_logger.version))
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_save_dir,
         save_top_k=3,
@@ -168,10 +152,48 @@ def train(
         callbacks=[checkpoint_callback, learningrate_callback],
         resume_from_checkpoint=checkpoint_path,
     )
-    # if trainer.global_rank == 0:
-    #     old_id = wandb_logger.experiment.config.get("slurm-id", "")
-    #     curr_id = os.environ.get("SLURM_JOB_ID", "unknown")
-    #     new_id = old_id + "-" + curr_id if len(old_id) else curr_id
-    #     wandb_logger.experiment.config.update({"slurm-id": new_id}, allow_val_change=True)
 
     trainer.fit(model=model, train_dataloaders=train_loader)
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-dir", required=True)
+    parser.add_argument("--name", required=True)
+    parser.add_argument("--checkpoint-save-dir", default=None)
+    parser.add_argument("--checkpoint", required=False, default="")
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--load-only-model", action="store_true")
+    parser.add_argument("--resume-wandb-logging", action="store_true")
+    parser.add_argument("--clip-model", default="ViT-L/14", help="which clip model to use")
+    parser.add_argument(
+        "--loss-function",
+        default="mse",
+        help="which loss function to use",
+        choices=("cosine", "mse"),
+    )
+    parser.add_argument("--nuscenes-datadir", default="/proj/berzelius-2021-92/data/nuscenes")
+    parser.add_argument("--nuscenes-split", default="train")
+    parser.add_argument("--dataset-name", default="once")
+    args = parser.parse_args()
+    assert args.name, "Empty name is not allowed"
+    return args
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    train(
+        args.data_dir,
+        args.name,
+        args.checkpoint_save_dir,
+        args.checkpoint,
+        args.batch_size,
+        args.workers,
+        args.load_only_model,
+        args.resume_wandb_logging,
+        clip_model_name=args.clip_model,
+        loss_function=args.loss_function,
+        nuscenes_datadir=args.nuscenes_datadir,
+        nuscenes_split=args.nuscenes_split,
+        dataset_name=args.dataset_name,
+    )
