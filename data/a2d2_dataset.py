@@ -8,7 +8,11 @@ from torchvision import transforms
 from a2d2_utils import load_config, undistort_image, transform_point_cloud_to_cam_view, random_crop
 
 class A2D2Dataset(Dataset):
-    def __init__(self, root_path, config_path, transform=None, crop_size=None):
+    def __init__(self,
+                 root_path = '/homes/math/golombiewski/workspace/data/A2D2',
+                 config_path = '/homes/math/golombiewski/workspace/data/A2D2_general/cams_lidars.json',
+                 transform = transforms.ToTensor(),
+                 crop_size=None):
         self.root_path = root_path
         self.transform = transform
         self.crop_size = crop_size
@@ -42,19 +46,23 @@ class A2D2Dataset(Dataset):
 
         # Load and process Lidar data
         lidar_data = np.load(lidar_path)
+        print('lidar_data type:', type(lidar_data))
+        print('lidar_data keys:', list(lidar_data.keys()))
+        print('lidar_data points type:', type(lidar_data['points']))
+        print('lidar_data points shape:', lidar_data['points'].shape)
         points = lidar_data['points']
-        lidar_view = self.config['cameras']['front_center']['view']
-        vehicle_view = self.config['vehicle']['view']
-        points_transformed = transform_point_cloud_to_cam_view(points, lidar_view, vehicle_view)
-
+        lidar_view = self.config['lidars']['front_center']['view']
+        camera_view = self.config['cameras']['front_center']['view']
+        points_transformed = transform_point_cloud_to_cam_view(points, lidar_view, camera_view)
+        print('points_transformed shape:', points_transformed.shape)
         # Add reflectance to point cloud dictionary
         point_cloud = {
             'x': points_transformed[:, 0],
             'y': points_transformed[:, 1],
             'z': points_transformed[:, 2],
-            'reflectance': points_transformed[:, 3],  # Assuming the 4th column is reflectance
-            'row': points_transformed[:, 4],  # Assuming you have these values
-            'col': points_transformed[:, 5]
+            'reflectance': lidar_data['reflectance'],
+            'row': lidar_data['row'],
+            'col': lidar_data['col']
         }
 
         image = cv2.imread(image_path)
@@ -68,7 +76,7 @@ class A2D2Dataset(Dataset):
             undistorted_image = self.transform(undistorted_image)
 
         # Convert image to tensor
-        image_tensor = transforms.ToTensor()(undistorted_image)
+        # undistorted_image = transforms.ToTensor(undistorted_image)
 
         # Convert point cloud to tensor
         points_tensor = torch.tensor(
@@ -80,4 +88,31 @@ class A2D2Dataset(Dataset):
             )).T
         )
 
-        return image_tensor, points_tensor
+        return undistorted_image, points_tensor
+    
+if __name__ == "__main__":
+    # Basic functionality tests
+    dataset = A2D2Dataset()
+    
+    # Check dataset length
+    print(f"Total data pairs: {len(dataset)}")
+
+    dataset.__getitem__(0)
+    
+    # # Check random data pairs
+    # for i in range(5):
+    #     idx = np.random.randint(0, len(dataset))
+    #     lidar_path, image_path = dataset.data_pairs[idx]
+    #     print(f"Pair {i}:")
+    #     print(f"  Lidar path: {lidar_path}")
+    #     print(f"  Image path: {image_path}")
+    #     print(f"  Image size: {cv2.imread(image_path).shape}")
+    #     print(f"  Number of points: {np.load(lidar_path)['points'].shape[0]}")
+    
+    # # Test __getitem__
+    # for i in range(5):
+    #     idx = np.random.randint(0, len(dataset))
+    #     image_tensor, points_tensor = dataset[idx]
+    #     print(f"Preprocessed pair {i}:")
+    #     print(f"  Image tensor shape: {image_tensor.shape}")
+    #     print(f"  Points tensor shape: {points_tensor.shape}")

@@ -1,8 +1,8 @@
-# lidar_encoder_minkunet.py
 import torch
 from torch import nn
 from mmdet3d.apis import init_model
 from voxelize import voxelize
+from torch_scatter import scatter_mean
 
 class LidarEncoderMinkUNet(nn.Module):
     def __init__(self, embed_dim=384):
@@ -23,24 +23,28 @@ class LidarEncoderMinkUNet(nn.Module):
         self.model = init_model(self.config_path, self.checkpoint_path)
         self.projection = nn.Linear(96, embed_dim)  # Assuming output features have 96 dimensions
 
-    def forward(self, points):
+    def forward(self, points, batch_size=None):
+        if batch_size is None:
+            batch_size = len(points)
+
         voxel_dict = voxelize(points, self.voxel_params)
         input_dict = {
             'points': points,
             'voxels': voxel_dict
         }
-        features = self.model.extract_feat(input_dict) # (num_voxels, feature_dim)
-        projected_features = self.projection(features) # (num_voxels, embed_dim)
-        embeddings = projected_features.mean(dim=0) # (embed_dim,)
-        return embeddings
+        features = self.model.extract_feat(input_dict)  # (num_voxels_in_batch, feature_dim)
+        batch_indices = voxel_dict['coors'][:, -1].long()  # index vector indicating batch index for each voxel
+        projected_features = self.projection(features)  # (num_voxels_in_batch, embed_dim)
+        global_features = scatter_mean(projected_features, batch_indices, dim=0, dim_size=batch_size)  # (batch_size, embed_dim)
+        return global_features
 
 if __name__ == "__main__":
     # Sanity check
     lidar_encoder = LidarEncoderMinkUNet().cuda()
-    points = [torch.rand(100, 4).cuda() for _ in range(4)]  # Batch size of 4, each with 100 points
+    points = [torch.rand(1000, 4).cuda() for _ in range(12)]
     embeddings = lidar_encoder(points)
 
-    print("Output embeddings:", embeddings)
-    print("Output shape:", embeddings.shape)
+    # print("Output embeddings:", embeddings)
+    # print("Output shape:", embeddings.shape)
 
 
