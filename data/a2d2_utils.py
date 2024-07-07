@@ -10,108 +10,115 @@ def load_config(config_path):
         return json.load(f)
 
 def undistort_image(image, cam_name, config):
-    intr_mat_undist = np.asarray(config['cameras'][cam_name]['CamMatrix'])
-    intr_mat_dist = np.asarray(config['cameras'][cam_name]['CamMatrixOriginal'])
-    dist_parms = np.asarray(config['cameras'][cam_name]['Distortion'])
-    lens = config['cameras'][cam_name]['Lens']
-    
-    if lens == 'Fisheye':
-        return cv2.fisheye.undistortImage(image, intr_mat_dist, D=dist_parms, Knew=intr_mat_undist)
-    elif lens == 'Telecam':
-        return cv2.undistort(image, intr_mat_dist, distCoeffs=dist_parms, newCameraMatrix=intr_mat_undist)
-    return image
-
-def transform_point_cloud_to_cam_view(points, src_view, target_view):
-    trans = get_transform_from_to(src_view, target_view)
-    points_hom = np.ones((points.shape[0], 4))
-    points_hom[:, 0:3] = points
-    points_trans = (np.dot(trans, points_hom.T)).T 
-    return points_trans[:, 0:3]
-
-def get_transform_from_to(src_view, target_view):
-    trans_to_global = get_transform_to_global(src_view)
-    trans_from_global = get_transform_to_global(target_view)
-    return np.dot(np.linalg.inv(trans_from_global), trans_to_global)
-
-def get_transform_to_global(view):
-    # Get axes
-    x_axis, y_axis, z_axis = get_axes_of_a_view(view)
-    
-    # Get origin 
-    origin = get_origin_of_a_view(view)
-    transform_to_global = np.eye(4)
-    
-    # Rotation
-    transform_to_global[0:3, 0] = x_axis
-    transform_to_global[0:3, 1] = y_axis
-    transform_to_global[0:3, 2] = z_axis
-    
-    # Origin
-    transform_to_global[0:3, 3] = origin
-    
-    return transform_to_global
-
-
-def get_axes_of_a_view(view):
-    x_axis = np.array(view['x-axis'])
-    y_axis = np.array(view['y-axis'])
-     
-    x_axis_norm = la.norm(x_axis)
-    y_axis_norm = la.norm(y_axis)
-
-    EPSILON = 1.0e-10  # Small constant to avoid division by zero
-    
-    if x_axis_norm < EPSILON or y_axis_norm < EPSILON:
-        raise ValueError("Norm of input vector(s) too small.")
+    if cam_name in ['front_left', 'front_center', 'front_right', 'side_left', 'side_right', 'rear_center']:
+        # get parameters from config file
+        intr_mat_undist = np.asarray(config['cameras'][cam_name]['CamMatrix'])
+        intr_mat_dist = np.asarray(config['cameras'][cam_name]['CamMatrixOriginal'])
+        dist_parms = np.asarray(config['cameras'][cam_name]['Distortion'])
+        lens = config['cameras'][cam_name]['Lens']
         
-    # Normalize the axes
-    x_axis = x_axis / x_axis_norm
-    y_axis = y_axis / y_axis_norm
-    
-    # Make a new y-axis which lies in the original x-y plane, but is orthogonal to x-axis
-    y_axis = y_axis - x_axis * np.dot(y_axis, x_axis)
- 
-    # Create orthogonal z-axis
-    z_axis = np.cross(x_axis, y_axis)
-    
-    # Calculate and check y-axis and z-axis norms
-    y_axis_norm = la.norm(y_axis)
-    z_axis_norm = la.norm(z_axis)
-    
-    if y_axis_norm < EPSILON or z_axis_norm < EPSILON:
-        raise ValueError("Norm of view axis vector(s) too small.")
-        
-    # Make x/y/z-axes orthonormal
-    y_axis = y_axis / y_axis_norm
-    z_axis = z_axis / z_axis_norm
-    
-    return x_axis, y_axis, z_axis
+        if (lens == 'Fisheye'):
+            return cv2.fisheye.undistortImage(image, intr_mat_dist, D=dist_parms, Knew=intr_mat_undist)
+        elif (lens == 'Telecam'):
+            return cv2.undistort(image, intr_mat_dist, distCoeffs=dist_parms, newCameraMatrix=intr_mat_undist)
+        else:
+            return image
+    else:
+        return image
 
-def get_origin_of_a_view(view):
-    return np.array(view['origin'])
-
-def random_crop(image, point_cloud, crop_size):
-    """Randomly crop the image and adjust the point cloud."""
-    width, height = image.size
+def random_crop(image, combined_points, crop_size):
+    # Random crop image and reduce point cloud accordingly
+    height, width, _ = image.shape
     crop_width, crop_height = crop_size
 
     if crop_width > width or crop_height > height:
         raise ValueError("Crop size must be smaller than image size")
 
-    left = random.randint(0, width - crop_width)
-    upper = random.randint(0, height - crop_height)
+    left = np.random.randint(0, width - crop_width)
+    upper = np.random.randint(0, height - crop_height)
 
-    cropped_image = image.crop((left, upper, left + crop_width, upper + crop_height))
+    cropped_image = image[upper:upper + crop_height, left:left + crop_width, :]
 
-    # Adjust point cloud
-    new_point_cloud = {k: [] for k in point_cloud}
-    for i in range(len(point_cloud['x'])):
-        if (left <= point_cloud['col'][i] < left + crop_width) and (upper <= point_cloud['row'][i] < upper + crop_height):
-            new_point_cloud['x'].append(point_cloud['x'][i])
-            new_point_cloud['y'].append(point_cloud['y'][i])
-            new_point_cloud['z'].append(point_cloud['z'][i])
-            new_point_cloud['reflectance'].append(point_cloud['reflectance'][i])
-            new_point_cloud['row'].append(point_cloud['row'][i] - upper)
-            new_point_cloud['col'].append(point_cloud['col'][i] - left)
+    # Reduce point cloud
+    mask = (
+        (combined_points[:, 4] >= upper) &
+        (combined_points[:, 4] < upper + crop_height) &
+        (combined_points[:, 5] >= left) &
+        (combined_points[:, 5] < left + crop_width)
+    )
 
-    return cropped_image, new_point_cloud
+    new_points = combined_points[mask]
+    new_points[:, 4] -= upper
+    new_points[:, 5] -= left
+
+    return cropped_image, new_points
+
+
+## The following funtions are for testing purposes only
+
+def collect_point_retention_ratios(dataset, num_samples):
+    ratios = np.zeros(num_samples)
+    for i in range(num_samples):
+        idx = np.random.randint(0, len(dataset))
+        image_tensor, points_tensor = dataset[idx]
+        original_num_points = np.load(dataset.data_pairs[idx][0])['points'].shape[0]
+        points_retained_ratio = points_tensor.shape[0] / original_num_points
+        ratios[i] = points_retained_ratio
+        print(i+1)
+    return ratios
+
+def map_lidar_points_onto_image(image_orig, lidar, pixel_size=3, pixel_opacity=1):
+    image = np.copy(image_orig)
+    
+    # get rows and cols
+    rows = (lidar['row'] + 0.5).astype(np.intc)
+    cols = (lidar['col'] + 0.5).astype(np.intc)
+  
+    # lowest distance values to be accounted for in colour code
+    MIN_DISTANCE = np.min(lidar['distance'])
+    # largest distance values to be accounted for in colour code
+    MAX_DISTANCE = np.max(lidar['distance'])
+
+    # get distances
+    distances = lidar['distance']  
+    # determine point colours from distance
+    colours = (distances - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)
+    colours = np.asarray([np.asarray(hsv_to_rgb(0.75 * c, \
+                        np.sqrt(pixel_opacity), 1.0)) for c in colours])
+    pixel_rowoffs = np.indices([pixel_size, pixel_size])[0] - pixel_size // 2
+    pixel_coloffs = np.indices([pixel_size, pixel_size])[1] - pixel_size // 2
+    canvas_rows = image.shape[0]
+    canvas_cols = image.shape[1]
+    for i in range(len(rows)):
+        pixel_rows = np.clip(rows[i] + pixel_rowoffs, 0, canvas_rows - 1)
+        pixel_cols = np.clip(cols[i] + pixel_coloffs, 0, canvas_cols - 1)
+        image[pixel_rows, pixel_cols, :] = \
+                (1. - pixel_opacity) * \
+                np.multiply(image[pixel_rows, pixel_cols, :], \
+                colours[i]) + pixel_opacity * 255 * colours[i]
+    return image.astype(np.uint8)
+
+def hsv_to_rgb(h, s, v):
+    if s == 0.0:
+        return v, v, v
+    
+    i = int(h * 6.0)
+    f = (h * 6.0) - i
+    p = v * (1.0 - s)
+    q = v * (1.0 - s * f)
+    t = v * (1.0 - s * (1.0 - f))
+    i = i % 6
+    
+    if i == 0:
+        return v, t, p
+    if i == 1:
+        return q, v, p
+    if i == 2:
+        return p, v, t
+    if i == 3:
+        return p, q, v
+    if i == 4:
+        return t, p, v
+    if i == 5:
+        return v, p, q
+
