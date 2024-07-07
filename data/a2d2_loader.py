@@ -1,58 +1,40 @@
 import torch
-import numpy as np
 from torch.utils.data import DataLoader
-from a2d2_dataset import A2D2Dataset
-import matplotlib.pyplot as plt
+from .a2d2_dataset import A2D2Dataset
 
 def collate_fn(batch):
-    images, point_clouds = zip(*batch)
-    
-    # Find the maximum number of points in a point cloud
-    max_points = max(pc.shape[0] for pc in point_clouds)
-    
-    # Pad point clouds to have the same number of points
-    padded_point_clouds = []
-    for pc in point_clouds:
-        if pc.shape[0] < max_points:
-            # Pad with zeros
-            padding = np.zeros((max_points - pc.shape[0], 3))
-            pc = np.vstack([pc, padding])
-        padded_point_clouds.append(pc)
-    
-    # Convert to numpy array before converting to tensor
-    padded_point_clouds = np.array(padded_point_clouds)
-    
-    # Convert to tensors
+    images = [item[0] for item in batch]
+    point_clouds = [item[1] for item in batch]
+
     images = torch.stack(images)
-    padded_point_clouds = torch.tensor(padded_point_clouds, dtype=torch.float32)
+    return images, point_clouds
+
+def build_loader(batch_size=32, num_workers=16, shuffle=True):
+    dataset = A2D2Dataset()
     
-    return images, padded_point_clouds
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=shuffle,
+        collate_fn=collate_fn
+    )
+    
+    return dataloader
 
-root_path = '/homes/math/golombiewski/workspace/data/A2D2'
-config_path = '/homes/math/golombiewski/workspace/data/A2D2_general/cams_lidars.json'
+if __name__ == "__main__":
+    batch_size = 8
+    num_workers = 4
 
-# Instantiate the dataset
-dataset = A2D2Dataset(root_path, config_path)
+    # Initialize the DataLoader
+    dataloader = build_loader(batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    print(f"DataLoader initialized with batch size {batch_size} and {num_workers} workers.")
 
-# Creating a DataLoader
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
-
-# Fetch a single batch
-batch = next(iter(dataloader))
-images, point_clouds = batch
-
-# Check shapes
-print("Image batch shape:", images.shape)  # Expected: torch.Size([4, 3, 1208, 1920])
-print("Point cloud batch shape:", point_clouds.shape)  # Expected: torch.Size([4, 14062, 3])
-
-# Check individual images and point clouds
-for i in range(len(images)):
-    print(f"Image {i} shape: {images[i].shape}")
-    print(f"Point Cloud {i} shape: {point_clouds[i].shape}")
-
-# Verify padding in the point clouds
-for i in range(len(point_clouds)):
-    pc = point_clouds[i].numpy()
-    num_points = (pc[:, 0] != 0).sum()  # Assuming valid points have non-zero x-coordinate
-    print(f"Point Cloud {i} has {num_points} valid points out of {pc.shape[0]}")
-
+    # Fetch a few batches and print their shapes
+    for i, (images, point_clouds) in enumerate(dataloader):
+        print(f"Batch {i+1}:")
+        print(f"  Images shape: {images.shape}")
+        print(f"  Number of point clouds: {len(point_clouds)}")
+        print(f"  First point cloud shape: {point_clouds[0].shape if len(point_clouds) > 0 else 'N/A'}")
+        if i == 2:  # Stop after 3 batches
+            break

@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 import matplotlib.pyplot as plt
-from a2d2_utils import load_config, undistort_image, random_crop
+from .a2d2_utils import load_config, undistort_image, random_crop
 
 class A2D2Dataset(Dataset):
     def __init__(self,
@@ -16,7 +16,7 @@ class A2D2Dataset(Dataset):
                                         transforms.ToTensor(),
                                         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                                     ]),
-                 crop_size=None):
+                 crop_size=(896, 896)):
         self.root_path = root_path
         self.image_transform = image_transform
         self.crop_size = crop_size

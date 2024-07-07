@@ -2,7 +2,7 @@ from torch import nn
 import timm
 
 class ImageEncoder(nn.Module):
-    def __init__(self, embed_dim=256):
+    def __init__(self, embed_dim=384):
         super().__init__()
         self.model = timm.create_model(
             'vit_small_patch16_224',
