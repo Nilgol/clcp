@@ -1,14 +1,14 @@
 import torch
 from torch import nn
 from mmdet3d.apis import init_model
-from voxelize import voxelize
 from torch_scatter import scatter_mean
+from .voxelize import voxelize
 
 class LidarEncoderMinkUNet(nn.Module):
     def __init__(self, embed_dim=384):
         super().__init__()
         self.config_path = '/homes/math/golombiewski/workspace/mmdetection3d/configs/minkunet/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti.py'
-        self.checkpoint_path = 'minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth'
+        self.checkpoint_path = '/homes/math/golombiewski/workspace/clcl/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth'
         self.voxel_params = {
             'voxel_type': 'minkunet',
             'batch_first': False,

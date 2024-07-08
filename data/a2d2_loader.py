@@ -17,7 +17,8 @@ def build_loader(batch_size=32, num_workers=16, shuffle=True):
         batch_size=batch_size,
         num_workers=num_workers,
         shuffle=shuffle,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        drop_last=True
     )
     
     return dataloader

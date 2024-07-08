@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger, CSVLogger
+from pytorch_lightning.strategies import DDPStrategy
 
 from data.a2d2_loader import build_loader
 from model.lidar_encoder_minkunet import LidarEncoderMinkUNet
@@ -14,13 +15,15 @@ from model.image_encoder import ImageEncoder
 
 
 class CameraLidarPretrain(pl.LightningModule):
-    def __init__(self, embed_dim, batch_size, temperature=0.7):
+    def __init__(self, embed_dim, temperature, batch_size, epoch_size):
         super().__init__()
         self.image_encoder = ImageEncoder(embed_dim=embed_dim)
         self.lidar_encoder = LidarEncoderMinkUNet(embed_dim=embed_dim)
         self.embed_dim = embed_dim
-        self.batch_size = batch_size
         self.temperature = nn.Parameter(torch.tensor(temperature))
+        self.batch_size = batch_size
+        self.epoch_size = epoch_size
+
 
     def contrastive_loss(self, image_embeddings, lidar_embeddings):
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
@@ -36,20 +39,22 @@ class CameraLidarPretrain(pl.LightningModule):
         image_embeddings = self.image_encoder(images)
         lidar_embeddings = self.lidar_encoder(point_clouds, self.batch_size)
         loss = self.contrastive_loss(image_embeddings, lidar_embeddings)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("learning_rate", self.trainer.optimizers[0].param_groups[0]['lr'], prog_bar=True)
+        self.log("temperature", self.temperature, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
-        steps_per_epoch = len(train_loader) // self.trainer.accumulate_grad_batches
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(
-            optimizer,
-            max_lr=1e-3,
-            steps_per_epoch=steps_per_epoch,
-            epochs=self.trainer.max_epochs,
-            pct_start=0.1
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, weight_decay=1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, 
+            T_0=10,  # Number of iterations for the first restart
+            T_mult=1,  # A factor increases T_i after a restart
+            eta_min=1e-6  # Minimum learning rate
         )
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "train_loss"}
+        return {"optimizer": optimizer,
+                "lr_scheduler": scheduler,
+                "monitor": "train_loss"}
 
 
 def train(
@@ -57,7 +62,7 @@ def train(
     checkpoint_save_dir,
     exp_name="clcl_pretrain",
     embed_dim=384,
-    temperature=0.7,
+    temperature=0.07,
     batch_size=32,
     num_workers=16,
     load_only_model=False,
@@ -65,6 +70,8 @@ def train(
     available_gpus = torch.cuda.device_count() or None
     accelerator = "gpu" if available_gpus else "cpu"
     devices = available_gpus if available_gpus else 1
+    if torch.cuda.is_available():
+        torch.set_float32_matmul_precision('high')
 
     train_loader = build_loader(
         batch_size=batch_size,
@@ -73,16 +80,18 @@ def train(
     )
     model = CameraLidarPretrain(
         embed_dim=embed_dim,
-        batch_size=batch_size,
         temperature=temperature,
+        batch_size=batch_size,
+        epoch_size = len(train_loader) / devices
     )
 
     if checkpoint_path and load_only_model:
         model = CameraLidarPretrain.load_from_checkpoint(
             checkpoint_path,
             embed_dim=embed_dim,
-            batch_size=batch_size,
             temperature=temperature,
+            batch_size=batch_size,
+            epoch_size=len(train_loader) / devices
         )
         checkpoint_path = None
 
@@ -100,18 +109,20 @@ def train(
 
     learningrate_callback = LearningRateMonitor(logging_interval="step")
 
-    logger = TensorBoardLogger("logs", name=exp_name)
+    wandb_logger = WandbLogger()
+    csv_logger = CSVLogger("logs", name=exp_name)
 
     trainer = pl.Trainer(
-        logger=logger,
-        precision=16,
+        detect_anomaly=True,
+        # fast_dev_run=20,
+        logger=[wandb_logger, csv_logger],
+        precision='32-true',
         accelerator=accelerator,
         devices=devices,
         limit_train_batches=None,
-        max_epochs=1,
-        strategy="ddp",
+        max_epochs=2,
+        strategy=DDPStrategy(find_unused_parameters=True),
         callbacks=[checkpoint_callback, learningrate_callback],
-        resume_from_checkpoint=checkpoint_path,
     )
 
     trainer.fit(model=model, train_dataloaders=train_loader)
