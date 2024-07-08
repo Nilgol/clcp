@@ -14,6 +14,7 @@ class A2D2Dataset(Dataset):
                 root_path = '/homes/math/golombiewski/workspace/data/A2D2',
                 config_path = '/homes/math/golombiewski/workspace/data/A2D2_general/cams_lidars.json',
                 missing_keys_file='/homes/math/golombiewski/workspace/clcl/data/missing_keys_files.pkl',
+                missing_point_clouds_file='/homes/math/golombiewski/workspace/clcl/data/empty_point_clouds.pkl',
                 image_transform = transforms.Compose([
                                         transforms.ToTensor(),
                                         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -23,7 +24,8 @@ class A2D2Dataset(Dataset):
         self.image_transform = image_transform
         self.crop_size = crop_size
         self.config = load_config(config_path)
-        self.missing_keys_files = self._load_missing_keys_file(missing_keys_file)
+        self.missing_keys_files = self._load_missing_keys_file(missing_keys_file) 
+        self.missing_point_clouds = self._load_missing_point_clouds_file(missing_point_clouds_file) 
         self.data_pairs = self._create_data_pairs()
 
     def _load_missing_keys_file(self, missing_keys_file):
@@ -31,30 +33,30 @@ class A2D2Dataset(Dataset):
             missing_keys_files = pickle.load(f)
         return missing_keys_files
     
+    def _load_missing_point_clouds_file(self, missing_point_clouds_file):
+        with open(missing_point_clouds_file, 'rb') as f:
+            missing_point_clouds = pickle.load(f)
+        return missing_point_clouds
+    
     def _create_data_pairs(self):
         lidar_paths = sorted(glob.glob(os.path.join(self.root_path, '*/lidar/cam_front_center/*.npz')))
         data_pairs = []
+
         for lidar_path in lidar_paths:
-            if lidar_path in self.missing_keys_files:
-                # print(f"Skipping file with missing keys: {lidar_path}")
+            if lidar_path in self.missing_keys_files or lidar_path in self.missing_point_clouds:                # print(f"Skipping file with missing keys: {lidar_path}")
                 continue
             seq_name = lidar_path.split('/')[-4]  # Correct index to get the sequence name
             image_file_name = lidar_path.split('/')[-1].replace('lidar', 'camera').replace('.npz', '.png')
             image_path = os.path.join(self.root_path, seq_name, 'camera/cam_front_center', image_file_name)
-            
-            if not os.path.exists(lidar_path):
-                print(f"Lidar file does not exist: {lidar_path}")
-            if not os.path.exists(image_path):
-                print(f"Image file does not exist: {image_path}")
-            
             data_pairs.append((lidar_path, image_path))
+
         return data_pairs
 
 
     def __len__(self):
         return len(self.data_pairs)
 
-    def __getitem__(self, idx):
+    def _getitem_unsafe(self, idx):
         lidar_path, image_path = self.data_pairs[idx]
 
         lidar_data = np.load(lidar_path)
@@ -65,12 +67,13 @@ class A2D2Dataset(Dataset):
             reflectance = np.zeros((lidar_data['points'].shape[0], 1))  # Example default value
         else:
             reflectance = lidar_data['reflectance'].reshape(-1, 1)
+
         if 'row' not in lidar_data:
             print(f"Missing 'row' in file: {lidar_path}")
             row = np.zeros((lidar_data['points'].shape[0], 1))  # Default value
         else:
             row = lidar_data['row'].reshape(-1, 1)
-
+            
         if 'col' not in lidar_data:
             print(f"Missing 'col' in file: {lidar_path}")
             col = np.zeros((lidar_data['points'].shape[0], 1))  # Default value
@@ -99,6 +102,22 @@ class A2D2Dataset(Dataset):
         points_tensor = torch.tensor(point_cloud[:, :4], dtype=torch.float32)
 
         return undistorted_image, points_tensor
+    
+    def __getitem__(self, idx):
+        max_attempts = 100
+        attempt = 0
+        
+        while attempt < max_attempts:
+            image, point_cloud = self._getitem_unsafe(idx)
+            if point_cloud.size(0) > 0:  # Check if the point cloud is not empty
+                return image, point_cloud
+            else:
+                attempt += 1
+                idx = (idx + 1) % len(self.data_pairs)  # Try the next index
+        
+        # If no valid pair is found after max_attempts
+        raise RuntimeError(f"Could not find a valid sample after {max_attempts} attempts starting from index {idx}")
+
 
 
 if __name__ == "__main__":

@@ -39,7 +39,7 @@ class CameraLidarPretrain(pl.LightningModule):
         image_embeddings = self.image_encoder(images)
         lidar_embeddings = self.lidar_encoder(point_clouds, self.batch_size)
         loss = self.contrastive_loss(image_embeddings, lidar_embeddings)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log("learning_rate", self.trainer.optimizers[0].param_groups[0]['lr'], prog_bar=True)
         self.log("temperature", self.temperature, prog_bar=True)
         return loss
@@ -64,7 +64,7 @@ def train(
     embed_dim=384,
     temperature=0.07,
     batch_size=32,
-    num_workers=16,
+    num_workers=8,
     load_only_model=False,
 ):
     available_gpus = torch.cuda.device_count() or None
@@ -100,27 +100,28 @@ def train(
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_save_dir,
-        save_top_k=3,
+        save_top_k=-1,
         monitor="train_loss",
         save_last=True,
-        every_n_train_steps=250,
+        # every_n_train_steps=250,
         save_on_train_epoch_end=True,
     )
 
     learningrate_callback = LearningRateMonitor(logging_interval="step")
 
-    wandb_logger = WandbLogger()
-    csv_logger = CSVLogger("logs", name=exp_name)
+    log_dir = '/homes/math/golombiewski/workspace/fast/clcl/logs'
+    wandb_logger = WandbLogger(save_dir=log_dir, name=exp_name)
+    csv_logger = CSVLogger(save_dir=log_dir, name=exp_name)
 
     trainer = pl.Trainer(
-        detect_anomaly=True,
+        # detect_anomaly=True,
         # fast_dev_run=20,
         logger=[wandb_logger, csv_logger],
         precision='32-true',
         accelerator=accelerator,
         devices=devices,
         limit_train_batches=None,
-        max_epochs=2,
+        max_epochs=50,
         strategy=DDPStrategy(find_unused_parameters=True),
         callbacks=[checkpoint_callback, learningrate_callback],
     )
