@@ -1,4 +1,0 @@
-name: lidar2
-channels:
-  - defaults
-prefix: /homes/math/golombiewski/.conda/envs/lidar2
