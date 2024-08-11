@@ -13,30 +13,22 @@ def extract_timm_weights_from_checkpoint(checkpoint_path, output_path):
     checkpoint = torch.load(checkpoint_path)
     state_dict = checkpoint["state_dict"]
 
-    # Filter out only the image_encoder keys and remove projection weights
+    # Filter out image_encoder keys and remove projection weights
     timm_state_dict = {}
     for key, value in state_dict.items():
         if key.startswith("image_encoder.model"):
-            # Strip the 'image_encoder.model' prefix
             new_key = key.replace("image_encoder.model.", "")
             timm_state_dict[new_key] = value
 
-    # Save the TIMM model weights to a new file
     torch.save(timm_state_dict, output_path)
-    print(f"TIMM image encoder weights saved to {output_path}")
+    print("Checkpoint path:", checkpoint_path)
+    print(f"Image encoder weights from saved to {output_path}")
 
 
 if __name__ == "__main__":
-    clcl_ckpt = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/last.ckpt"
-    timm_vit_pth = (
-        "/homes/math/golombiewski/workspace/data/timm_vit_small_patch16_224.pth"
+    source_path = (
+        "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/clcl_exp6_b768/last.ckpt"
     )
-    liploc_pth = (
-        "/homes/math/golombiewski/workspace/data/liploc_vit_small_patch16_224.pth"
-    )
-    clcl_epoch30 = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/epoch=30-step=27714.ckpt"
-    # state_dict = checkpoint['state_dict']
-    target_path = "/homes/math/golombiewski/workspace/data/clcl_vit_epoch30.pth"
-    extract_timm_weights_from_checkpoint(clcl_epoch30, target_path)
-    # checkpoint = torch.load(target_path)
-    # print_state_dict(checkpoint)
+    exp_name = "clcl_vit_b768"
+    target_path = f"/homes/math/golombiewski/workspace/data/models/{exp_name}.pth"
+    extract_timm_weights_from_checkpoint(source_path, target_path)

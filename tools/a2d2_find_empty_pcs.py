@@ -8,9 +8,7 @@ from tqdm import tqdm
 def find_empty_point_clouds(data_dir, output_file):
     empty_files = []
 
-    lidar_paths = sorted(
-        glob.glob(os.path.join(data_dir, "*/lidar/cam_front_center/*.npz"))
-    )
+    lidar_paths = sorted(glob.glob(os.path.join(data_dir, "*/lidar/cam_front_center/*.npz")))
     for lidar_path in tqdm(lidar_paths, desc="Checking point clouds"):
         try:
             lidar_data = np.load(lidar_path)
@@ -27,5 +25,7 @@ def find_empty_point_clouds(data_dir, output_file):
 
 
 if __name__ == "__main__":
-    root_path = "/homes/math/golombiewski/workspace/data/A2D2"  # Update this to your dataset path
+    root_path = (
+        "/homes/math/golombiewski/workspace/data/A2D2"  # Update this to your dataset path
+    )
     find_empty_point_clouds(root_path, "empty_point_clouds.pkl")

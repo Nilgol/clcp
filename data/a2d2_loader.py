@@ -29,12 +29,8 @@ if __name__ == "__main__":
     num_workers = 4
 
     # Initialize the DataLoader
-    dataloader = build_loader(
-        batch_size=batch_size, num_workers=num_workers, shuffle=True
-    )
-    print(
-        f"DataLoader initialized with batch size {batch_size} and {num_workers} workers."
-    )
+    dataloader = build_loader(batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    print(f"DataLoader initialized with batch size {batch_size} and {num_workers} workers.")
 
     # Fetch a few batches and print their shapes
     for i, (images, point_clouds) in enumerate(dataloader):

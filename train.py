@@ -73,9 +73,7 @@ class CameraLidarPretrain(pl.LightningModule):
             prog_bar=True,
             batch_size=self.batch_size,
         )
-        self.log(
-            "temperature", self.temperature, prog_bar=True, batch_size=self.batch_size
-        )
+        self.log("temperature", self.temperature, prog_bar=True, batch_size=self.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -191,9 +189,7 @@ def train(
         save_on_train_epoch_end=True,
         verbose=True,
     )
-    early_stopping = EarlyStopping(
-        monitor="val_loss", patience=5, mode="min", verbose=True
-    )
+    early_stopping = EarlyStopping(monitor="val_loss", patience=15, mode="min", verbose=True)
     learningrate_callback = LearningRateMonitor(logging_interval="step")
 
     log_dir = "/homes/math/golombiewski/workspace/fast/clcl/logs"
@@ -201,7 +197,7 @@ def train(
     csv_logger = CSVLogger(save_dir=log_dir, name=exp_name)
 
     trainer = pl.Trainer(
-        detect_anomaly=True,
+        # detect_anomaly=True,
         # fast_dev_run=10,
         logger=[wandb_logger, csv_logger],
         precision="32-true",
@@ -229,27 +225,19 @@ def parse_args():
         default="/homes/math/golombiewski/workspace/fast/clcl/checkpoints",
         help="Directory to save checkpoints",
     )
-    parser.add_argument(
-        "--checkpoint", default="", help="Path to the checkpoint to load"
-    )
+    parser.add_argument("--checkpoint", default="", help="Path to the checkpoint to load")
     parser.add_argument(
         "--learning-rate", type=float, default=1e-4, help="Learning rate for training"
     )
-    parser.parse_args(
-        "weight-decay", type=float, default=1e-6, help="Weight decay for training"
-    )
     parser.add_argument(
-        "--batch-size", type=int, default=32, help="Batch size for training"
+        "--weight-decay", type=float, default=1e-6, help="Weight decay for training"
     )
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
     parser.add_argument(
         "--workers", type=int, default=8, help="Number of workers for data loading"
     )
-    parser.add_argument(
-        "--max-epochs", type=int, default=50, help="Number of epochs to train"
-    )
-    parser.add_argument(
-        "--val-ratio", type=float, default=0.15, help="Validation set ratio"
-    )
+    parser.add_argument("--max-epochs", type=int, default=50, help="Number of epochs to train")
+    parser.add_argument("--val-ratio", type=float, default=0.15, help="Validation set ratio")
     parser.add_argument(
         "--freeze-lidar-encoder", action="store_true", help="Freeze the lidar encoder"
     )

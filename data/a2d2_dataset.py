@@ -20,9 +20,7 @@ class A2D2Dataset(Dataset):
         image_transform=transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]
         ),
         crop_size=(896, 896),
@@ -40,9 +38,7 @@ class A2D2Dataset(Dataset):
 
         if val_ratio < 0 or val_ratio > 0.5:
             val_ratio = max(0, min(val_ratio, 0.5))
-            print(
-                f"Warning: val_ratio should be between 0 and 0.5. Setting it to {val_ratio}."
-            )
+            print(f"Warning: val_ratio should be between 0 and 0.5. Setting it to {val_ratio}.")
         self.val_ratio = val_ratio
 
         self.train_data_pairs, self.val_data_pairs = self._create_data_pairs()
@@ -71,10 +67,7 @@ class A2D2Dataset(Dataset):
         scene_dict = {}
 
         for lidar_path in lidar_paths:
-            if (
-                lidar_path in self.missing_keys_files
-                or lidar_path in self.missing_point_clouds
-            ):
+            if lidar_path in self.missing_keys_files or lidar_path in self.missing_point_clouds:
                 continue
             seq_name = lidar_path.split("/")[-4]
             if seq_name not in scene_dict:
@@ -94,9 +87,7 @@ class A2D2Dataset(Dataset):
 
             for lidar_path in train_lidar_paths:
                 image_file_name = (
-                    lidar_path.split("/")[-1]
-                    .replace("lidar", "camera")
-                    .replace(".npz", ".png")
+                    lidar_path.split("/")[-1].replace("lidar", "camera").replace(".npz", ".png")
                 )
                 image_path = os.path.join(
                     self.root_path, seq_name, "camera/cam_front_center", image_file_name
@@ -105,9 +96,7 @@ class A2D2Dataset(Dataset):
 
             for lidar_path in val_lidar_paths:
                 image_file_name = (
-                    lidar_path.split("/")[-1]
-                    .replace("lidar", "camera")
-                    .replace(".npz", ".png")
+                    lidar_path.split("/")[-1].replace("lidar", "camera").replace(".npz", ".png")
                 )
                 image_path = os.path.join(
                     self.root_path, seq_name, "camera/cam_front_center", image_file_name

@@ -26,9 +26,7 @@ class LidarEncoderMinkUNet(nn.Module):
         if self.freeze_encoder:
             for param in self.model.parameters():
                 param.requires_grad = False
-        self.projection = nn.Linear(
-            96, embed_dim
-        )  # Assuming output features have 96 dimensions
+        self.projection = nn.Linear(96, embed_dim)  # Pointwise features have dimension 96
 
     def forward(self, points, batch_size=None):
         if batch_size is None:
@@ -40,15 +38,9 @@ class LidarEncoderMinkUNet(nn.Module):
             with torch.no_grad():
                 features = self.model.extract_feat(input_dict)
         else:
-            features = self.model.extract_feat(
-                input_dict
-            )  # (num_voxels_in_batch, feature_dim)
-        batch_indices = voxel_dict["coors"][
-            :, -1
-        ].long()  # index vector indicating batch index for each voxel
-        projected_features = self.projection(
-            features
-        )  # (num_voxels_in_batch, embed_dim)
+            features = self.model.extract_feat(input_dict)  # (num_voxels, feature_dim)
+        batch_indices = voxel_dict["coors"][:, -1].long()  # batch index for each voxel
+        projected_features = self.projection(features)  # (num_voxels, embed_dim)
         global_features = scatter_mean(
             projected_features, batch_indices, dim=0, dim_size=batch_size
         )  # (batch_size, embed_dim)
