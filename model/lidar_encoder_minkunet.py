@@ -6,7 +6,7 @@ from .voxelize import voxelize
 
 
 class LidarEncoderMinkUNet(nn.Module):
-    def __init__(self, embed_dim=384, freeze_encoder=False):
+    def __init__(self, embed_dim=384, freeze_encoder=False, projection_type="linear"):
         super().__init__()
         self.config_path = "/homes/math/golombiewski/workspace/mmdetection3d/configs/minkunet/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti.py"
         self.checkpoint_path = "/homes/math/golombiewski/workspace/clcl/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth"
@@ -26,7 +26,18 @@ class LidarEncoderMinkUNet(nn.Module):
         if self.freeze_encoder:
             for param in self.model.parameters():
                 param.requires_grad = False
-        self.projection = nn.Linear(96, embed_dim)  # Pointwise features have dimension 96
+        if projection_type == "linear":
+            self.projection = nn.Linear(96, embed_dim)
+        elif projection_type == "mlp":
+            self.projection = nn.Sequential(
+                nn.Linear(96, 192),
+                nn.GELU(),
+                nn.Linear(192, embed_dim),
+                nn.Dropout(0.1),
+                nn.LayerNorm(embed_dim)
+            )
+        else:
+            raise ValueError("Invalid projection type")
 
     def forward(self, points, batch_size=None):
         if batch_size is None:

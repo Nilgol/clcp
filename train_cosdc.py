@@ -97,25 +97,22 @@ class CameraLidarPretrain(pl.LightningModule):
             self.parameters(),
             lr=self.learning_rate,
             weight_decay=self.weight_decay,
-            # betas=(0.9, 0.98),
+            betas=(0.9, 0.98),
         )
-        # warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-        #     optimizer, start_factor=1e-6/self.learning_rate, total_iters=5
-        # )
-        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1e-6/self.learning_rate, total_iters=10
+        )
+        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=150, eta_min=1e-5
+        )
+        scheduler = torch.optim.lr_scheduler.SequentialLR(
             optimizer,
-            T_0=10,  # Number of iterations for the first restart
-            T_mult=1,  # A factor increases T_i after a restart
-            eta_min=1e-6,  # Minimum learning rate
+            schedulers=[warmup_scheduler, cosine_scheduler],
+            milestones=[10],
         )
-        # scheduler = torch.optim.lr_scheduler.SequentialLR(
-        #     optimizer,
-        #     schedulers=[warmup_scheduler, cosine_scheduler],
-        #     milestones=[5],
-        # )
         return {
             "optimizer": optimizer,
-            "lr_scheduler": cosine_scheduler,
+            "lr_scheduler": scheduler,
             "monitor": "val_loss",
         }
 
@@ -207,16 +204,17 @@ def train(
         save_on_train_epoch_end=True,
         verbose=True,
     )
-    early_stopping = EarlyStopping(monitor="val_loss", patience=50, mode="min", verbose=True)
+    early_stopping = EarlyStopping(monitor="val_loss", patience=25, mode="min", verbose=True)
     learningrate_callback = LearningRateMonitor(logging_interval="step")
 
     log_dir = "/homes/math/golombiewski/workspace/fast/clcl/logs"
     wandb_logger = WandbLogger(save_dir=log_dir, name=exp_name)
+    csv_logger = CSVLogger(save_dir=log_dir, name=exp_name)
 
     trainer = pl.Trainer(
         # detect_anomaly=True,
         # fast_dev_run=10,
-        logger=wandb_logger,
+        logger=[wandb_logger, csv_logger],
         precision="32-true",
         accelerator=accelerator,
         devices=devices,
