@@ -77,9 +77,7 @@ class CameraLidarPretrain(pl.LightningModule):
             prog_bar=True,
             batch_size=self.batch_size,
         )
-        self.log(
-            "temperature", self.temperature, prog_bar=True, batch_size=self.batch_size
-        )
+        self.log("temperature", self.temperature, prog_bar=True, batch_size=self.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -102,7 +100,7 @@ class CameraLidarPretrain(pl.LightningModule):
             # betas=(0.9, 0.98),
         )
         warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=1e-6/self.learning_rate, total_iters=5
+            optimizer, start_factor=1e-6 / self.learning_rate, total_iters=5
         )
         cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
@@ -123,8 +121,8 @@ class CameraLidarPretrain(pl.LightningModule):
 
 
 def train(
-    checkpoint_path,
-    checkpoint_save_dir,
+    checkpoint_path=None,
+    checkpoint_save_dir="saved_checkpoints",
     exp_name="clcl_pretrain",
     embed_dim=384,
     temperature=0.07,
@@ -212,9 +210,7 @@ def train(
         save_on_train_epoch_end=True,
         verbose=True,
     )
-    early_stopping = EarlyStopping(
-        monitor="val_loss", patience=50, mode="min", verbose=True
-    )
+    early_stopping = EarlyStopping(monitor="val_loss", patience=50, mode="min", verbose=True)
     learningrate_callback = LearningRateMonitor(logging_interval="step")
 
     log_dir = "/homes/math/golombiewski/workspace/fast/clcl/logs"
@@ -239,5 +235,3 @@ def train(
         val_dataloaders=val_loader,
         ckpt_path=checkpoint_path if not load_only_model else None,
     )
-
-

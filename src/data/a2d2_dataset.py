@@ -34,42 +34,59 @@ class A2D2Dataset(Dataset):
         self.augment = augment
 
         if self.augment:
-            augmentations = A.Compose([
-                A.OneOf([
-                    A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1, p=0.7),
-                    A.RandomBrightnessContrast(
-                        brightness_limit=(-0.35, -0.2),
-                        contrast_limit=(-0.35, -0.2),
-                        p=0.2),
-                    A.ToGray(p=0.1),
-                ], p=1.0),
-                
-                A.OneOf([
-                    A.GaussianBlur(blur_limit=(3, 9), sigma_limit=0, p=1.0),
-                    A.GlassBlur(sigma=0.7, max_delta=1, iterations=2, mode="fast", p=1.0),
-                    A.GaussNoise(var_limit=(10.0, 500.0), mean=0, per_channel=True, p=1.0),
-                ], p=0.5),
-
-            ], p=0.9)
+            augmentations = A.Compose(
+                [
+                    A.OneOf(
+                        [
+                            A.ColorJitter(
+                                brightness=0.3,
+                                contrast=0.3,
+                                saturation=0.3,
+                                hue=0.1,
+                                p=0.7,
+                            ),
+                            A.RandomBrightnessContrast(
+                                brightness_limit=(-0.35, -0.2),
+                                contrast_limit=(-0.35, -0.2),
+                                p=0.2,
+                            ),
+                            A.ToGray(p=0.1),
+                        ],
+                        p=1.0,
+                    ),
+                    A.OneOf(
+                        [
+                            A.GaussianBlur(blur_limit=(3, 9), sigma_limit=0, p=1.0),
+                            A.GlassBlur(
+                                sigma=0.7, max_delta=1, iterations=2, mode="fast", p=1.0
+                            ),
+                            A.GaussNoise(
+                                var_limit=(10.0, 500.0), mean=0, per_channel=True, p=1.0
+                            ),
+                        ],
+                        p=0.5,
+                    ),
+                ],
+                p=0.9,
+            )
         else:
             augmentations = None
 
-        default_transforms = A.Compose([
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ToTensorV2(),
-        ])
+        default_transforms = A.Compose(
+            [
+                A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ToTensorV2(),
+            ]
+        )
 
         if augmentations is not None:
             self.image_transform = A.Compose([augmentations, default_transforms])
         else:
             self.image_transform = default_transforms
 
-
         if val_ratio < 0 or val_ratio > 0.5:
             val_ratio = max(0, min(val_ratio, 0.5))
-            print(
-                f"Warning: val_ratio should be between 0 and 0.5. Setting it to {val_ratio}."
-            )
+            print(f"Warning: val_ratio should be between 0 and 0.5. Setting it to {val_ratio}.")
         self.val_ratio = val_ratio
 
         self.train_data_pairs, self.val_data_pairs = self._create_data_pairs()
@@ -98,10 +115,7 @@ class A2D2Dataset(Dataset):
         scene_dict = {}
 
         for lidar_path in lidar_paths:
-            if (
-                lidar_path in self.missing_keys_files
-                or lidar_path in self.missing_point_clouds
-            ):
+            if lidar_path in self.missing_keys_files or lidar_path in self.missing_point_clouds:
                 continue
             seq_name = lidar_path.split("/")[-4]
             if seq_name not in scene_dict:
@@ -121,9 +135,7 @@ class A2D2Dataset(Dataset):
 
             for lidar_path in train_lidar_paths:
                 image_file_name = (
-                    lidar_path.split("/")[-1]
-                    .replace("lidar", "camera")
-                    .replace(".npz", ".png")
+                    lidar_path.split("/")[-1].replace("lidar", "camera").replace(".npz", ".png")
                 )
                 image_path = os.path.join(
                     self.root_path, seq_name, "camera/cam_front_center", image_file_name
@@ -132,9 +144,7 @@ class A2D2Dataset(Dataset):
 
             for lidar_path in val_lidar_paths:
                 image_file_name = (
-                    lidar_path.split("/")[-1]
-                    .replace("lidar", "camera")
-                    .replace(".npz", ".png")
+                    lidar_path.split("/")[-1].replace("lidar", "camera").replace(".npz", ".png")
                 )
                 image_path = os.path.join(
                     self.root_path, seq_name, "camera/cam_front_center", image_file_name
@@ -171,7 +181,7 @@ class A2D2Dataset(Dataset):
         undistorted_image = cv2.resize(undistorted_image, (224, 224))
 
         if self.image_transform:
-            transformed_image = self.image_transform(image=undistorted_image)['image']
+            transformed_image = self.image_transform(image=undistorted_image)["image"]
 
         points_tensor = torch.tensor(point_cloud[:, :4], dtype=torch.float32)
 
@@ -210,31 +220,34 @@ if __name__ == "__main__":
         std = torch.tensor(std).view(1, 3, 1, 1)
         tensor = tensor * std + mean
         return tensor
-    
+
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
 
     import random
+
     indices = list(range(len(train_set)))
     random.shuffle(indices)
 
     # Iterate over the dataset and save the images
     for i in indices[:num_samples]:
         image, _ = train_set[i]
-        
+
         # Denormalize the image
         image = denormalize_image(image.unsqueeze(0), mean, std).squeeze(0)
-        
+
         # Convert tensor to a NumPy array for saving
         image_np = image.permute(1, 2, 0).numpy()  # CHW to HWC
         image_np = (image_np * 255).astype(np.uint8)
-        
+
         # Save the image
-        cv2.imwrite(os.path.join(output_dir, f"image_{i}.png"), cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(
+            os.path.join(output_dir, f"image_{i}.png"),
+            cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR),
+        )
         print(f"Saved image_{i}.png")
 
     print(f"{num_samples} cropped and resized images saved in '{output_dir}' directory.")
-
 
     # Check dataset length
     # print(f"Total train pairs: {len(train_set)}")

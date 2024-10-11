@@ -3,9 +3,11 @@ import os
 import pickle
 import numpy as np
 import cv2
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
+from torchvision.transforms import v2
 import matplotlib.pyplot as plt
 from .a2d2_utils import load_config, undistort_image, random_crop
 
@@ -17,24 +19,70 @@ class A2D2Dataset(Dataset):
         config_path="/homes/math/golombiewski/workspace/data/A2D2_general/cams_lidars.json",
         missing_keys_file="/homes/math/golombiewski/workspace/clcl/data/missing_keys_files.pkl",
         missing_point_clouds_file="/homes/math/golombiewski/workspace/clcl/data/empty_point_clouds.pkl",
-        image_transform=transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        ),
         crop_size=(896, 896),
         val_ratio=0.2,
         split="train",
+        augment=False,
     ):
         self.root_path = root_path
-        self.image_transform = image_transform
         self.crop_size = crop_size
         self.config = load_config(config_path)
         self.missing_keys_files = self._load_missing_keys_file(missing_keys_file)
         self.missing_point_clouds = self._load_missing_point_clouds_file(
             missing_point_clouds_file
         )
+        self.augment = augment
+
+        if self.augment:
+            augmentations = A.Compose(
+                [
+                    A.OneOf(
+                        [
+                            A.ColorJitter(
+                                brightness=0.3,
+                                contrast=0.3,
+                                saturation=0.3,
+                                hue=0.1,
+                                p=0.7,
+                            ),
+                            A.RandomBrightnessContrast(
+                                brightness_limit=(-0.35, -0.2),
+                                contrast_limit=(-0.35, -0.2),
+                                p=0.2,
+                            ),
+                            A.ToGray(p=0.1),
+                        ],
+                        p=1.0,
+                    ),
+                    A.OneOf(
+                        [
+                            A.GaussianBlur(blur_limit=(3, 9), sigma_limit=0, p=1.0),
+                            A.GlassBlur(
+                                sigma=0.7, max_delta=1, iterations=2, mode="fast", p=1.0
+                            ),
+                            A.GaussNoise(
+                                var_limit=(10.0, 500.0), mean=0, per_channel=True, p=1.0
+                            ),
+                        ],
+                        p=0.5,
+                    ),
+                ],
+                p=0.9,
+            )
+        else:
+            augmentations = None
+
+        default_transforms = A.Compose(
+            [
+                A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ToTensorV2(),
+            ]
+        )
+
+        if augmentations is not None:
+            self.image_transform = A.Compose([augmentations, default_transforms])
+        else:
+            self.image_transform = default_transforms
 
         if val_ratio < 0 or val_ratio > 0.5:
             val_ratio = max(0, min(val_ratio, 0.5))
@@ -133,11 +181,11 @@ class A2D2Dataset(Dataset):
         undistorted_image = cv2.resize(undistorted_image, (224, 224))
 
         if self.image_transform:
-            undistorted_image = self.image_transform(undistorted_image)
+            transformed_image = self.image_transform(image=undistorted_image)["image"]
 
         points_tensor = torch.tensor(point_cloud[:, :4], dtype=torch.float32)
 
-        return undistorted_image, points_tensor
+        return transformed_image, points_tensor
 
     def __getitem__(self, idx):
         """Random crop might discard ALL points from the point cloud.
@@ -161,13 +209,49 @@ class A2D2Dataset(Dataset):
 if __name__ == "__main__":
     # Basic functionality tests
     crop = 896
-    train_set = A2D2Dataset(crop_size=(crop, crop), val_ratio=0.1, split="train")
-    val_set = A2D2Dataset(crop_size=(crop, crop), val_ratio=0.1, split="val")
-    num_samples = 10
+    train_set = A2D2Dataset(crop_size=(crop, crop), val_ratio=0.1, split="train", augment=False)
+    val_set = A2D2Dataset(crop_size=(crop, crop), val_ratio=0.1, split="val", augment=False)
+    num_samples = 200
+    output_dir = "/homes/math/golombiewski/workspace/fast/crop_resized_images"
+    os.makedirs(output_dir, exist_ok=True)
+
+    def denormalize_image(tensor, mean, std):
+        mean = torch.tensor(mean).view(1, 3, 1, 1)
+        std = torch.tensor(std).view(1, 3, 1, 1)
+        tensor = tensor * std + mean
+        return tensor
+
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+
+    import random
+
+    indices = list(range(len(train_set)))
+    random.shuffle(indices)
+
+    # Iterate over the dataset and save the images
+    for i in indices[:num_samples]:
+        image, _ = train_set[i]
+
+        # Denormalize the image
+        image = denormalize_image(image.unsqueeze(0), mean, std).squeeze(0)
+
+        # Convert tensor to a NumPy array for saving
+        image_np = image.permute(1, 2, 0).numpy()  # CHW to HWC
+        image_np = (image_np * 255).astype(np.uint8)
+
+        # Save the image
+        cv2.imwrite(
+            os.path.join(output_dir, f"image_{i}.png"),
+            cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR),
+        )
+        print(f"Saved image_{i}.png")
+
+    print(f"{num_samples} cropped and resized images saved in '{output_dir}' directory.")
 
     # Check dataset length
-    print(f"Total train pairs: {len(train_set)}")
-    print(f"Total val pairs: {len(val_set)}")
+    # print(f"Total train pairs: {len(train_set)}")
+    # print(f"Total val pairs: {len(val_set)}")
 
     # ratios = collect_point_retention_ratios(dataset, num_samples)
 

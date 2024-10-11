@@ -467,9 +467,7 @@ def create_open3d_pc(lidar, cam_image=None):
     # assign colours
     if cam_image is None:
         median_reflectance = np.median(lidar["reflectance"])
-        colours = colours_from_reflectances(lidar["reflectance"]) / (
-            median_reflectance * 5
-        )
+        colours = colours_from_reflectances(lidar["reflectance"]) / (median_reflectance * 5)
 
         # clip colours for visualisation on a white background
         colours = np.clip(colours, 0, 0.75)
@@ -883,9 +881,7 @@ def extract_semantic_file_name_from_image_file_name(file_name_image):
 
 
 seq_name = file_name_lidar.split("/")[7]
-file_name_semantic_label = extract_semantic_file_name_from_image_file_name(
-    file_name_image
-)
+file_name_semantic_label = extract_semantic_file_name_from_image_file_name(file_name_image)
 file_name_semantic_label = join(
     root_path, seq_name, "label/cam_front_center/", file_name_semantic_label
 )
@@ -897,9 +893,7 @@ semantic_image_front_center = cv2.imread(file_name_semantic_label)
 # In[123]:
 
 
-semantic_image_front_center = cv2.cvtColor(
-    semantic_image_front_center, cv2.COLOR_BGR2RGB
-)
+semantic_image_front_center = cv2.cvtColor(semantic_image_front_center, cv2.COLOR_BGR2RGB)
 
 
 # In[124]:

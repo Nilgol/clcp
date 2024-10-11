@@ -1,0 +1,56 @@
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=11_val_loss=5.51.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp26_b768_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=19_val_loss=5.01.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp26_b768_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=35_val_loss=3.91.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp26_b768_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp26_b768_lr3e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=67_val_loss=2.87.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp26_b768_epoch67.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=11_val_loss=5.16.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp28_b512_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=19_val_loss=4.68.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp28_b512_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=35_val_loss=3.60.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp28_b512_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5/exp28_b512_lr2e-3_wd1e-3_wu5_t01_tmul2_etamin1e-5_epoch=67_val_loss=2.77.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp28_b512_epoch67.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=11_val_loss=5.50.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp32_b768_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=19_val_loss=4.72.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp32_b768_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=35_val_loss=4.21.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp32_b768_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp32_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=67_val_loss=2.34.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp32_b768_epoch67.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=11_val_loss=5.37.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp33_b768_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=19_val_loss=4.80.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp33_b768_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=35_val_loss=3.64.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp33_b768_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp33_b768_lr3e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=67_val_loss=2.93.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp33_b768_epoch67.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=11_val_loss=5.04.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp34_b512_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=19_val_loss=4.28.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp34_b512_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=35_val_loss=2.56.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp34_b512_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug/exp34_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_aug_epoch=67_val_loss=1.81.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp34_b512_epoch67.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=11_val_loss=4.96.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp35_b512_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=19_val_loss=4.35.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp35_b512_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=35_val_loss=3.17.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp35_b512_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug/exp35_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_lin_aug_epoch=67_val_loss=2.65.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp35_b512_epoch67.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_epoch=11_val_loss=4.93.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp36_b512_epoch11.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_epoch=19_val_loss=4.11.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp36_b512_epoch19.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_epoch=35_val_loss=2.37.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp36_b512_epoch35.pth
+Checkpoint path: /homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp/exp36_b512_lr2e-3_wd1e-3_wu5_etamin1e-5_mlp_epoch=67_val_loss=1.82.ckpt
+Image encoder weights from saved to /homes/math/golombiewski/workspace/data/models/exp36_b512_epoch67.pth

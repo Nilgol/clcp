@@ -100,7 +100,7 @@ class CameraLidarPretrain(pl.LightningModule):
             betas=(0.9, 0.98),
         )
         warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=1e-6/self.learning_rate, total_iters=10
+            optimizer, start_factor=1e-6 / self.learning_rate, total_iters=10
         )
         cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=150, eta_min=1e-5
@@ -261,10 +261,13 @@ def parse_args():
         action="store_true",
         help="Load only the model without training state",
     )
-    parser.add_argument("--projection-type",
-                        type=str, default="linear",
-                        choices=["linear", "mlp"],
-                        help="Type of projection head")
+    parser.add_argument(
+        "--projection-type",
+        type=str,
+        default="linear",
+        choices=["linear", "mlp"],
+        help="Type of projection head",
+    )
     args = parser.parse_args()
     assert args.name, "Empty name is not allowed"
     return args

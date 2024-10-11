@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 from model.image_encoder import ImageEncoder
 from model.lidar_encoder_minkunet import LidarEncoderMinkUNet
 
+
 class CameraLidarPretrain(pl.LightningModule):
     def __init__(
         self,
@@ -48,7 +49,11 @@ class CameraLidarPretrain(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         loss = self._common_step(batch, batch_idx)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("learning_rate", self.trainer.optimizers[0].param_groups[0]["lr"], prog_bar=True)
+        self.log(
+            "learning_rate",
+            self.trainer.optimizers[0].param_groups[0]["lr"],
+            prog_bar=True,
+        )
         self.log("temperature", self.temperature, prog_bar=True)
         return loss
 
@@ -64,7 +69,10 @@ class CameraLidarPretrain(pl.LightningModule):
             weight_decay=self.weight_decay,
         )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer, T_0=1, T_mult=2, eta_min=1e-5,
+            optimizer,
+            T_0=1,
+            T_mult=2,
+            eta_min=1e-5,
         )
         return {
             "optimizer": optimizer,

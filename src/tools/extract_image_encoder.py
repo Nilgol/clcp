@@ -3,6 +3,7 @@ import torch
 import os
 import glob
 
+
 def find_checkpoint_file(exp, epoch, base_checkpoint_dir):
     # Construct the pattern to search for files containing the epoch number
     exp_pattern = f"exp{exp}*"
@@ -11,14 +12,17 @@ def find_checkpoint_file(exp, epoch, base_checkpoint_dir):
 
     # Use glob to find files matching the pattern
     matching_files = glob.glob(search_path)
-    
+
     if len(matching_files) == 0:
         raise FileNotFoundError(f"No checkpoint file found for epoch {epoch} in {search_path}")
     elif len(matching_files) > 1:
-        print(f"Multiple checkpoint files found for epoch {epoch} in {search_path}. Using the first one.")
-    
+        print(
+            f"Multiple checkpoint files found for epoch {epoch} in {search_path}. Using the first one."
+        )
+
     # Return the first matching file (assuming you want to use the first match)
     return matching_files[0]
+
 
 def extract_weights_for_experiments(experiments, epochs):
     base_checkpoint_dir = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/"
@@ -28,14 +32,14 @@ def extract_weights_for_experiments(experiments, epochs):
         for epoch in epochs:
             # Find the checkpoint file for the given experiment and epoch
             checkpoint_path = find_checkpoint_file(str(exp), epoch, base_checkpoint_dir)
-            
+
             # Construct the output filename
             exp_name = f"exp{exp}_{checkpoint_path.split('_')[1]}_epoch{epoch}"
             target_path = os.path.join(output_dir, f"{exp_name}.pth")
-            
+
             # Extract the weights
             extract_timm_weights_from_checkpoint(checkpoint_path, target_path)
-            #print(f"Extracted weights for {exp_name} to {target_path}")
+            # print(f"Extracted weights for {exp_name} to {target_path}")
 
 
 def print_state_dict(state_dict):

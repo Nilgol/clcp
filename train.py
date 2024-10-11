@@ -99,23 +99,23 @@ class CameraLidarPretrain(pl.LightningModule):
             weight_decay=self.weight_decay,
             # betas=(0.9, 0.98),
         )
-        # warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-        #     optimizer, start_factor=1e-6/self.learning_rate, total_iters=5
-        # )
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1e-6 / self.learning_rate, total_iters=5
+        )
         cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            T_0=10,  # Number of iterations for the first restart
-            T_mult=1,  # A factor increases T_i after a restart
-            eta_min=1e-6,  # Minimum learning rate
+            T_0=1,  # Number of iterations for the first restart
+            T_mult=2,  # A factor increases T_i after a restart
+            eta_min=1e-5,  # Minimum learning rate
         )
-        # scheduler = torch.optim.lr_scheduler.SequentialLR(
-        #     optimizer,
-        #     schedulers=[warmup_scheduler, cosine_scheduler],
-        #     milestones=[5],
-        # )
+        scheduler = torch.optim.lr_scheduler.SequentialLR(
+            optimizer,
+            schedulers=[warmup_scheduler, cosine_scheduler],
+            milestones=[5],
+        )
         return {
             "optimizer": optimizer,
-            "lr_scheduler": cosine_scheduler,
+            "lr_scheduler": scheduler,
             "monitor": "val_loss",
         }
 
@@ -135,6 +135,7 @@ def train(
     freeze_lidar_encoder=False,
     load_only_model=False,
     projection_type="linear",
+    augment=False,
 ):
     experiment_checkpoint_dir = os.path.join(checkpoint_save_dir, exp_name)
     os.makedirs(experiment_checkpoint_dir, exist_ok=True)
@@ -154,11 +155,13 @@ def train(
         root_path="/homes/math/golombiewski/workspace/data/A2D2",
         val_ratio=val_ratio,
         split="train",
+        augment=augment,
     )
     val_dataset = A2D2Dataset(
         root_path="/homes/math/golombiewski/workspace/data/A2D2",
         val_ratio=val_ratio,
         split="val",
+        augment=False,
     )
 
     train_loader = build_loader(
@@ -239,10 +242,9 @@ def parse_args():
     parser.add_argument("--name", required=True, help="Name of the experiment")
     parser.add_argument(
         "--checkpoint-save-dir",
-        default="/homes/math/golombiewski/workspace/fast/clcl/checkpoints",
         help="Directory to save checkpoints",
     )
-    parser.add_argument("--checkpoint", default="", help="Path to the checkpoint to load")
+    parser.add_argument("--checkpoint-path", default="", help="Path to the checkpoint to load")
     parser.add_argument(
         "--learning-rate", type=float, default=1e-4, help="Learning rate for training"
     )
@@ -263,10 +265,18 @@ def parse_args():
         action="store_true",
         help="Load only the model without training state",
     )
-    parser.add_argument("--projection-type",
-                        type=str, default="linear",
-                        choices=["linear", "mlp"],
-                        help="Type of projection head")
+    parser.add_argument(
+        "--projection-type",
+        type=str,
+        default="linear",
+        choices=["linear", "mlp"],
+        help="Type of projection head",
+    )
+    parser.add_argument(
+        "--augment",
+        action="store_true",  # Boolean flag
+        help="Apply image augmentations",
+    )
     args = parser.parse_args()
     assert args.name, "Empty name is not allowed"
     return args
@@ -287,4 +297,5 @@ if __name__ == "__main__":
         load_only_model=args.load_only_model,
         checkpoint_save_dir=args.checkpoint_save_dir,
         projection_type=args.projection_type,
+        augment=args.augment,
     )

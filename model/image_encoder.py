@@ -28,6 +28,4 @@ if __name__ == "__main__":
     image_encoder = ImageEncoder()
     dummy_batch = torch.randn(12, 3, 224, 224)
     output = image_encoder(dummy_batch)
-
-    print("Output:", output)
     print("Output shape:", output.shape)

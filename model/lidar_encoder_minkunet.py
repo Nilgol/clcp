@@ -34,7 +34,7 @@ class LidarEncoderMinkUNet(nn.Module):
                 nn.GELU(),
                 nn.Linear(192, embed_dim),
                 nn.Dropout(0.1),
-                nn.LayerNorm(embed_dim)
+                nn.LayerNorm(embed_dim),
             )
         else:
             raise ValueError("Invalid projection type")

@@ -104,7 +104,7 @@ class CameraLidarPretrain(pl.LightningModule):
             max_lr=self.learning_rate,  # Peak learning rate
             total_steps=1000,
             pct_start=0.5,  # Percentage of the cycle spent increasing LR
-            anneal_strategy='cos',  # Cosine annealing
+            anneal_strategy="cos",  # Cosine annealing
             div_factor=1e3,  # Initial learning rate is max_lr / div_factor
             final_div_factor=1e3,  # Final learning rate is max_lr / final_div_factor
         )
@@ -264,10 +264,13 @@ def parse_args():
         action="store_true",
         help="Load only the model without training state",
     )
-    parser.add_argument("--projection-type",
-                        type=str, default="linear",
-                        choices=["linear", "mlp"],
-                        help="Type of projection head")
+    parser.add_argument(
+        "--projection-type",
+        type=str,
+        default="linear",
+        choices=["linear", "mlp"],
+        help="Type of projection head",
+    )
     args = parser.parse_args()
     assert args.name, "Empty name is not allowed"
     return args

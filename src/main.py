@@ -1,76 +1,67 @@
 import argparse
+
+from config import load_config, update_config_from_args
 from train import train
 
+
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--name", required=True, help="Name of the experiment")
+    parser = argparse.ArgumentParser(description="Override config parameters")
+
+    # Shorthands added
+    parser.add_argument("-n", "--exp-name", required=True, help="Name of the experiment")
+    parser.add_argument("-cp", "--config_path", type=str, help="Path to the config file")
     parser.add_argument(
         "--checkpoint-save-dir",
-        default="/homes/math/golombiewski/workspace/fast/clcl/checkpoints",
         help="Directory to save checkpoints",
     )
+    parser.add_argument("--checkpoint-path", default="", help="Path to the checkpoint to load")
+    parser.add_argument("-bs", "--batch-size", type=int, help="Batch size for training")
+    parser.add_argument("-lr", "--learning-rate", type=float, help="Learning rate for training")
+    parser.add_argument("-wd", "--weight-decay", type=float, help="Weight decay for training")
+    parser.add_argument("-w", "--workers", type=int, help="Number of workers for data loading")
+    parser.add_argument("-e", "--max-epochs", type=int, help="Number of epochs to train")
+    parser.add_argument("-vr", "--val-ratio", type=float, help="Validation set ratio")
+
     parser.add_argument(
-        "--checkpoint", default="", help="Path to the checkpoint to load"
+        "-fl",
+        "--freeze-lidar-encoder",
+        action="store_true",
+        help="Freeze the lidar encoder",
     )
     parser.add_argument(
-        "--learning-rate", type=float, default=1e-4, help="Learning rate for training"
-    )
-    parser.add_argument(
-        "--weight-decay", type=float, default=1e-5, help="Weight decay for training"
-    )
-    parser.add_argument(
-        "--batch-size", type=int, default=32, help="Batch size for training"
-    )
-    parser.add_argument(
-        "--workers", type=int, default=8, help="Number of workers for data loading"
-    )
-    parser.add_argument(
-        "--max-epochs", type=int, default=50, help="Number of epochs to train"
-    )
-    parser.add_argument(
-        "--val-ratio", type=float, default=0.15, help="Validation set ratio"
-    )
-    parser.add_argument(
-        "--freeze-lidar-encoder", action="store_true", help="Freeze the lidar encoder"
-    )
-    parser.add_argument(
+        "-lom",
         "--load-only-model",
         action="store_true",
         help="Load only the model without training state",
     )
     parser.add_argument(
+        "-pt",
         "--projection-type",
         type=str,
-        default="linear",
         choices=["linear", "mlp"],
         help="Type of projection head",
     )
     parser.add_argument(
-        "--augment",
-        action="store_true",  # Boolean flag
-        help="Apply image augmentations",
+        "-a", "--augment", action="store_true", help="Apply image augmentations"
     )
-    args = parser.parse_args()
-    assert args.name, "Empty name is not allowed"
-    return args
+
+    return parser.parse_args()
+
 
 def main():
     args = parse_args()
-    train(
-        checkpoint_path=args.checkpoint,
-        exp_name=args.name,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        batch_size=args.batch_size,
-        num_workers=args.workers,
-        val_ratio=args.val_ratio,
-        max_epochs=args.max_epochs,
-        freeze_lidar_encoder=args.freeze_lidar_encoder,
-        load_only_model=args.load_only_model,
-        checkpoint_save_dir=args.checkpoint_save_dir,
-        projection_type=args.projection_type,
-        augment=args.augment,
-    )
+
+    # Create config dict from config file path or empty dict
+    if args.config_path:
+        config = load_config(args.config_path)  # Load config from file
+    else:
+        config = {}
+
+    # Update config dict with command line arguments
+    config = update_config_from_args(config, args)
+
+    # Start training
+    train(**config)
 
 
 if __name__ == "__main__":
