@@ -1,13 +1,24 @@
+"""
+Main entry point for training a model.
+
+This module loads configuration files, updates them with any command line argument overrides,
+and starts the training.
+"""
+
 import argparse
 
 from config import load_config, update_config_from_args
 from train import train
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for overriding configuration parameters.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(description="Override config parameters")
 
-    # Shorthands added
     parser.add_argument("-n", "--exp-name", required=True, help="Name of the experiment")
     parser.add_argument("-cp", "--config_path", type=str, help="Path to the config file")
     parser.add_argument(
@@ -48,12 +59,15 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
+    """Load a configuration file if provided, update it with any
+    command line arguments, and then call the `train` function with the configuration.
+    """
     args = parse_args()
 
     # Create config dict from config file path or empty dict
     if args.config_path:
-        config = load_config(args.config_path)  # Load config from file
+        config = load_config(args.config_path)
     else:
         config = {}
 
