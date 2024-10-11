@@ -1,5 +1,6 @@
 import argparse
 import os
+from typing import Tuple
 
 import torch
 import torch.nn as nn
@@ -18,6 +19,8 @@ from data.a2d2_loader import build_loader
 from model.lidar_encoder_minkunet import LidarEncoderMinkUNet
 from model.image_encoder import ImageEncoder
 
+# path for A2D2 dataset. Should usually not change, so set it here once.
+DATA_ROOT_PATH = "/homes/math/golombiewski/workspace/data/A2D2"
 
 class CameraLidarPretrain(pl.LightningModule):
     def __init__(
@@ -120,6 +123,47 @@ class CameraLidarPretrain(pl.LightningModule):
         }
 
 
+def prepare_data_loaders(
+    batch_size: int, num_workers: int, val_ratio: float, augment: bool
+) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    """Prepare training and validation data loaders.
+
+    Args:
+        batch_size (int): Batch size for training.
+        num_workers (int): Number of workers for data loading.
+        val_ratio (float): Ratio of validation data.
+        augment (bool): Whether to apply data augmentation for training data.
+
+    Returns:
+        Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]: 
+            Training and validation data loaders.
+    """
+    train_dataset = A2D2Dataset(
+        root_path=DATA_ROOT_PATH,
+        val_ratio=val_ratio,
+        split="train",
+        augment=augment,
+    )
+    val_dataset = A2D2Dataset(
+        root_path=DATA_ROOT_PATH,
+        val_ratio=val_ratio,
+        split="val",
+        augment=False,
+    )
+    train_loader = build_loader(
+        train_dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=True,
+    )
+    val_loader = build_loader(
+        val_dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False,
+    )
+    return train_loader, val_loader
+
 def train(
     checkpoint_path=None,
     checkpoint_save_dir="saved_checkpoints",
@@ -137,6 +181,14 @@ def train(
     projection_type="linear",
     augment=False,
 ):
+    
+    train_loader, val_loader = prepare_data_loaders(
+        batch_size=batch_size,
+        num_workers=num_workers,
+        val_ratio=val_ratio,
+        augment=augment,
+    )
+
     experiment_checkpoint_dir = os.path.join(checkpoint_save_dir, exp_name)
     os.makedirs(experiment_checkpoint_dir, exist_ok=True)
 
@@ -151,31 +203,6 @@ def train(
     if torch.cuda.is_available():
         torch.set_float32_matmul_precision("high")
 
-    train_dataset = A2D2Dataset(
-        root_path="/homes/math/golombiewski/workspace/data/A2D2",
-        val_ratio=val_ratio,
-        split="train",
-        augment=augment,
-    )
-    val_dataset = A2D2Dataset(
-        root_path="/homes/math/golombiewski/workspace/data/A2D2",
-        val_ratio=val_ratio,
-        split="val",
-        augment=False,
-    )
-
-    train_loader = build_loader(
-        train_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        shuffle=True,
-    )
-    val_loader = build_loader(
-        val_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        shuffle=False,
-    )
     model = CameraLidarPretrain(
         embed_dim=embed_dim,
         temperature=temperature,
