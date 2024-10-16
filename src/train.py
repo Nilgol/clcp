@@ -1,28 +1,65 @@
-import argparse
+"""Training script for the Camera-Lidar Contrastive Learning (CLCL) model.
+"""
 import os
 from typing import Tuple
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
+from torch.utils.data import DataLoader
+
 from pytorch_lightning.callbacks import (
     LearningRateMonitor,
     ModelCheckpoint,
     EarlyStopping,
 )
-from pytorch_lightning.loggers import WandbLogger, CSVLogger
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy, SingleDeviceStrategy
+from pytorch_lightning import LightningModule, Trainer
 
+from config import Config
 from data.a2d2_dataset import A2D2Dataset
 from data.a2d2_loader import build_loader
 from model.lidar_encoder_minkunet import LidarEncoderMinkUNet
 from model.image_encoder import ImageEncoder
 
-# path for A2D2 dataset. Should usually not change, so set it here once.
-DATA_ROOT_PATH = "/homes/math/golombiewski/workspace/data/A2D2"
+# Path for A2D2 dataset. Should usually not change, so we set it here once.
+DATA_ROOT_DIR = "/homes/math/golombiewski/workspace/data/A2D2"
+WORK_DIR = "/homes/math/golombiewski/workspace/fast/clcl"
+LOG_DIR = WORK_DIR + "/logs"
+CHECKPOINT_SAVE_DIR = WORK_DIR + "/checkpoints"
 
-class CameraLidarPretrain(pl.LightningModule):
+
+class CameraLidarPretrain(LightningModule):
+    """
+    A module for contrastive pretraining of pairs of camera images and lidar point clouds.
+
+    The model takes embeddings from an image and point cloud encoder, respectively, and computes
+    as contrastive loss between them.
+
+    Attributes:
+        embed_dim (int): Dimension of joint embedding space for image and point cloud encoders.
+        temperature (float): Temperature parameter for the contrastive loss to scale logits.
+        learning_rate (float): Learning rate for the AdamW optimizer.
+        weight_decay (float): Weight decay for the AdamW optimizer.
+        batch_size (int): The batch size for training.
+        epoch_size (float): The number of batches per epoch (determined dynamically).
+        freeze_lidar_encoder (bool): If True, freezes the point cloud encoder weights.
+        projection_type (str): The type of projection head, either "linear" or "mlp".
+
+    Methods:
+        contrastive_loss(image_embeddings, lidar_embeddings):
+            Computes the contrastive loss between normalized image and point cloud embeddings.
+        
+        training_step(batch, batch_idx):
+            Performs a forward pass and computes the training loss for a given batch.
+        
+        validation_step(batch, batch_idx):
+            Performs a forward pass and computes the validation loss for a given batch.
+        
+        configure_optimizers():
+            Configures the AdamW optimizer and learning rate schedulers.
+    """
     def __init__(
         self,
         embed_dim,
@@ -49,6 +86,8 @@ class CameraLidarPretrain(pl.LightningModule):
         self.weight_decay = weight_decay
 
     def contrastive_loss(self, image_embeddings, lidar_embeddings):
+        """Normalize image and point cloud embeddings, then compute the contrastive loss.
+        """
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
         lidar_embeddings = F.normalize(lidar_embeddings, p=2, dim=-1)
         logits = (image_embeddings @ lidar_embeddings.T) / torch.exp(self.temperature)
@@ -57,7 +96,7 @@ class CameraLidarPretrain(pl.LightningModule):
         loss_l = F.cross_entropy(logits.T, labels)
         return (loss_i + loss_l) / 2
 
-    def _common_step(self, batch, batch_idx):
+    def _common_step(self, batch):
         images, point_clouds = batch
         image_embeddings = self.image_encoder(images)
         lidar_embeddings = self.lidar_encoder(point_clouds, self.batch_size)
@@ -65,7 +104,7 @@ class CameraLidarPretrain(pl.LightningModule):
         return loss
 
     def training_step(self, batch, batch_idx):
-        loss = self._common_step(batch, batch_idx)
+        loss = self._common_step(batch)
         self.log(
             "train_loss",
             loss,
@@ -84,7 +123,7 @@ class CameraLidarPretrain(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss = self._common_step(batch, batch_idx)
+        loss = self._common_step(batch)
         self.log(
             "val_loss",
             loss,
@@ -123,75 +162,86 @@ class CameraLidarPretrain(pl.LightningModule):
         }
 
 
-def prepare_data_loaders(
-    batch_size: int, num_workers: int, val_ratio: float, augment: bool
-) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """Prepare training and validation data loaders.
+def prepare_data_loaders(cfg: Config) -> Tuple[DataLoader, DataLoader]:
+    """Prepare training and validation data loaders using the given configuration.
 
     Args:
-        batch_size (int): Batch size for training.
-        num_workers (int): Number of workers for data loading.
-        val_ratio (float): Ratio of validation data.
-        augment (bool): Whether to apply data augmentation for training data.
+        cfg (Config): The configuration object containing the parameters.
 
     Returns:
-        Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]: 
+        Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
             Training and validation data loaders.
     """
     train_dataset = A2D2Dataset(
-        root_path=DATA_ROOT_PATH,
-        val_ratio=val_ratio,
+        root_path=DATA_ROOT_DIR,
+        val_ratio=cfg.get("val_ratio", 0.15),
         split="train",
-        augment=augment,
+        augment=cfg.get("augment", False),
     )
     val_dataset = A2D2Dataset(
-        root_path=DATA_ROOT_PATH,
-        val_ratio=val_ratio,
+        root_path=DATA_ROOT_DIR,
+        val_ratio=cfg.get("val_ratio", 0.15),
         split="val",
         augment=False,
     )
     train_loader = build_loader(
         train_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
+        batch_size=cfg.get("batch_size", 32),
+        num_workers=cfg.get("num_workers", 8),
         shuffle=True,
     )
     val_loader = build_loader(
         val_dataset,
-        batch_size=batch_size,
-        num_workers=num_workers,
+        batch_size=cfg.get("batch_size", 32),
+        num_workers=cfg.get("num_workers", 8),
         shuffle=False,
     )
     return train_loader, val_loader
 
-def train(
-    checkpoint_path=None,
-    checkpoint_save_dir="saved_checkpoints",
-    exp_name="clcl_pretrain",
-    embed_dim=384,
-    temperature=0.07,
-    learning_rate=1e-4,
-    weight_decay=1e-5,
-    batch_size=32,
-    num_workers=8,
-    val_ratio=0.15,
-    max_epochs=50,
-    freeze_lidar_encoder=False,
-    load_only_model=False,
-    projection_type="linear",
-    augment=False,
-):
-    
-    train_loader, val_loader = prepare_data_loaders(
-        batch_size=batch_size,
-        num_workers=num_workers,
-        val_ratio=val_ratio,
-        augment=augment,
+
+def load_model(cfg: Config, train_loader: torch.utils.data.DataLoader) -> CameraLidarPretrain:
+    """Load a model based on the provided configuration. Load from checkpoint if specified.
+
+    Args:
+        cfg (Config): Configuration object containing model parameters.
+        train_loader (torch.utils.data.DataLoader): The training data loader (for epoch size).
+        devices (int): Number of devices used for distributed training.
+
+    Returns:
+        LightningModule: The model (either newly initialized or loaded from a checkpoint).
+    """
+    available_gpus = torch.cuda.device_count() or None
+    devices = available_gpus if available_gpus else 1
+
+    if cfg.get("checkpoint_path") and cfg.get("load_only_model"):
+        return CameraLidarPretrain.load_from_checkpoint(checkpoint_path=cfg.get("checkpoint_path"))
+    return CameraLidarPretrain(
+        embed_dim=cfg.get("embed_dim", 384),
+        temperature=cfg.get("temperature", 0.07),
+        learning_rate=cfg.get("learning_rate", 1e-4),
+        batch_size=cfg.get("batch_size", 32),
+        freeze_lidar_encoder=cfg.get("freeze_lidar_encoder", False),
+        epoch_size=len(train_loader) / devices,
+        projection_type=cfg.get("projection_type", "linear"),
+        weight_decay=cfg.get("weight_decay", 1e-5),
     )
 
-    experiment_checkpoint_dir = os.path.join(checkpoint_save_dir, exp_name)
-    os.makedirs(experiment_checkpoint_dir, exist_ok=True)
 
+def load_trainer(cfg: Config) -> Trainer:
+    """Initialize and return a PyTorch Lightning Trainer with the specified configuration.
+
+    Args:
+        cfg (Config): Configuration object containing trainer parameters.
+
+    Returns:
+        Trainer: A PyTorch Lightning Trainer object.
+    """
+    exp_name = cfg.exp_name
+    available_gpus = torch.cuda.device_count() or None
+    accelerator = "gpu" if available_gpus else "cpu"
+    devices = available_gpus if available_gpus else 1
+
+    # Set up accelerator and strategy
     available_gpus = torch.cuda.device_count() or None
     accelerator = "gpu" if available_gpus else "cpu"
     devices = available_gpus if available_gpus else 1
@@ -203,28 +253,10 @@ def train(
     if torch.cuda.is_available():
         torch.set_float32_matmul_precision("high")
 
-    model = CameraLidarPretrain(
-        embed_dim=embed_dim,
-        temperature=temperature,
-        learning_rate=learning_rate,
-        batch_size=batch_size,
-        freeze_lidar_encoder=freeze_lidar_encoder,
-        epoch_size=len(train_loader) / devices,
-        projection_type=projection_type,
-        weight_decay=weight_decay,
-    )
-
-    if checkpoint_path and load_only_model:
-        model = CameraLidarPretrain.load_from_checkpoint(
-            checkpoint_path,
-            embed_dim=embed_dim,
-            temperature=temperature,
-            batch_size=batch_size,
-            epoch_size=len(train_loader) / devices,
-        )
-        checkpoint_path = None
-    elif not checkpoint_path:
-        checkpoint_path = None
+    # Set up callbacks
+    checkpoint_save_dir = cfg.get("checkpoint_save_dir", CHECKPOINT_SAVE_DIR)
+    experiment_checkpoint_dir = os.path.join(checkpoint_save_dir, exp_name)
+    os.makedirs(experiment_checkpoint_dir, exist_ok=True)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=experiment_checkpoint_dir,
@@ -237,13 +269,17 @@ def train(
         save_on_train_epoch_end=True,
         verbose=True,
     )
-    early_stopping = EarlyStopping(monitor="val_loss", patience=50, mode="min", verbose=True)
-    learningrate_callback = LearningRateMonitor(logging_interval="step")
+    early_stopping_callback = EarlyStopping(
+        monitor="val_loss", patience=50, mode="min", verbose=True
+    )
+    learning_rate_callback = LearningRateMonitor(logging_interval="step")
 
-    log_dir = "/homes/math/golombiewski/workspace/fast/clcl/logs"
+    # Set up logger
+    log_dir = cfg.get("log_dir", LOG_DIR)
     wandb_logger = WandbLogger(save_dir=log_dir, name=exp_name)
 
-    trainer = pl.Trainer(
+    # Initialize trainer
+    trainer = Trainer(
         # detect_anomaly=True,
         fast_dev_run=2,
         logger=wandb_logger,
@@ -251,14 +287,27 @@ def train(
         accelerator=accelerator,
         devices=devices,
         limit_train_batches=None,
-        max_epochs=max_epochs,
+        max_epochs=cfg.get("max_epochs", 100),
         strategy=strategy,
-        callbacks=[checkpoint_callback, learningrate_callback, early_stopping],
+        callbacks=[checkpoint_callback, learning_rate_callback, early_stopping_callback],
     )
+
+    return trainer
+
+
+def train(cfg: Config) -> None:
+    """Train a model using the provided configuration.
+
+    Args:
+        cfg (Config): The configuration object containing all parameters.
+    """
+    train_loader, val_loader = prepare_data_loaders(cfg)
+    model = load_model(cfg, train_loader)
+    trainer = load_trainer(cfg)
 
     trainer.fit(
         model=model,
         train_dataloaders=train_loader,
         val_dataloaders=val_loader,
-        ckpt_path=checkpoint_path if not load_only_model else None,
+        ckpt_path=cfg.get("checkpoint_path") if not cfg.get("load_only_model") else None,
     )
