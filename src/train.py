@@ -1,7 +1,8 @@
-"""Training script for the Camera-Lidar Contrastive Learning (CLCL) model.
+"""A Module for multimodal self-supervised pretraining of an image and a point cloud encoder.
+The module loads training and validation datasets, initializes a model, and trains it using PyTorch Lightning.
 """
 import os
-from typing import Tuple
+from typing import Tuple, List, Union
 
 import torch
 from torch import nn
@@ -29,7 +30,7 @@ WORK_DIR = "/homes/math/golombiewski/workspace/fast/clcl"
 LOG_DIR = WORK_DIR + "/logs"
 CHECKPOINT_SAVE_DIR = WORK_DIR + "/checkpoints"
 
-
+############### LEGACY CODE, not maintained ####################
 class CameraLidarPretrain(LightningModule):
     """
     A module for contrastive pretraining of pairs of camera images and lidar point clouds.
@@ -43,7 +44,6 @@ class CameraLidarPretrain(LightningModule):
         learning_rate (float): Learning rate for the AdamW optimizer.
         weight_decay (float): Weight decay for the AdamW optimizer.
         batch_size (int): The batch size for training.
-        epoch_size (float): The number of batches per epoch (determined dynamically).
         freeze_lidar_encoder (bool): If True, freezes the point cloud encoder weights.
         projection_type (str): The type of projection head, either "linear" or "mlp".
 
@@ -67,7 +67,6 @@ class CameraLidarPretrain(LightningModule):
         learning_rate,
         weight_decay,
         batch_size,
-        epoch_size,
         freeze_lidar_encoder=False,
         projection_type="linear",
     ):
@@ -81,7 +80,6 @@ class CameraLidarPretrain(LightningModule):
         self.embed_dim = embed_dim
         self.temperature = nn.Parameter(torch.tensor(temperature))
         self.batch_size = batch_size
-        self.epoch_size = epoch_size
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
 
@@ -160,17 +158,39 @@ class CameraLidarPretrain(LightningModule):
             "lr_scheduler": scheduler,
             "monitor": "val_loss",
         }
+####################################################################################
 
 
-def prepare_data_loaders(cfg: Config) -> Tuple[DataLoader, DataLoader]:
-    """Prepare training and validation data loaders using the given configuration.
+def train(cfg: Config) -> None:
+    """Train a model using the provided configuration:
+    1. Prepare train and val dataloader.
+    2. Load a model from config of previous checkpoint.
+    3. Instantiate PyTorch Lightning Trainer, then call the `fit` method on it.
 
     Args:
-        cfg (Config): The configuration object containing the parameters.
+        cfg (Config): The configuration object containing all parameters.
+    """
+    train_loader, val_loader = get_dataloaders(cfg)
+    model = load_model(cfg)
+    trainer = load_trainer(cfg)
+
+    trainer.fit(
+        model=model,
+        train_dataloaders=train_loader,
+        val_dataloaders=val_loader,
+        ckpt_path=cfg.get("checkpoint_path") if not cfg.get("load_only_model") else None,
+    )
+
+
+def get_dataloaders(cfg: Config) -> Tuple[DataLoader, DataLoader]:
+    """Prepare and return training and validation dataloaders using the given configuration.
+
+    Args:
+        cfg (Config): The configuration containing the parameters.
 
     Returns:
         Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-            Training and validation data loaders.
+            Training and validation dataloaders.
     """
     train_dataset = A2D2Dataset(
         root_path=DATA_ROOT_DIR,
@@ -199,36 +219,32 @@ def prepare_data_loaders(cfg: Config) -> Tuple[DataLoader, DataLoader]:
     return train_loader, val_loader
 
 
-def load_model(cfg: Config, train_loader: torch.utils.data.DataLoader) -> CameraLidarPretrain:
+def load_model(cfg: Config) -> CameraLidarPretrain:
     """Load a model based on the provided configuration. Load from checkpoint if specified.
+
+    WARNING: Checkpoint loading is untested.
 
     Args:
         cfg (Config): Configuration object containing model parameters.
-        train_loader (torch.utils.data.DataLoader): The training data loader (for epoch size).
-        devices (int): Number of devices used for distributed training.
 
     Returns:
         LightningModule: The model (either newly initialized or loaded from a checkpoint).
     """
-    available_gpus = torch.cuda.device_count() or None
-    devices = available_gpus if available_gpus else 1
-
     if cfg.get("checkpoint_path") and cfg.get("load_only_model"):
         return CameraLidarPretrain.load_from_checkpoint(checkpoint_path=cfg.get("checkpoint_path"))
     return CameraLidarPretrain(
         embed_dim=cfg.get("embed_dim", 384),
         temperature=cfg.get("temperature", 0.07),
-        learning_rate=cfg.get("learning_rate", 1e-4),
         batch_size=cfg.get("batch_size", 32),
-        freeze_lidar_encoder=cfg.get("freeze_lidar_encoder", False),
-        epoch_size=len(train_loader) / devices,
-        projection_type=cfg.get("projection_type", "linear"),
+        learning_rate=cfg.get("learning_rate", 1e-4),
         weight_decay=cfg.get("weight_decay", 1e-5),
+        freeze_lidar_encoder=cfg.get("freeze_lidar_encoder", False),
+        projection_type=cfg.get("projection_type", "linear"),
     )
 
 
 def load_trainer(cfg: Config) -> Trainer:
-    """Initialize and return a PyTorch Lightning Trainer with the specified configuration.
+    """Initialize and return a PyTorch Lightning Trainer instance with the specified configuration.
 
     Args:
         cfg (Config): Configuration object containing trainer parameters.
@@ -236,24 +252,87 @@ def load_trainer(cfg: Config) -> Trainer:
     Returns:
         Trainer: A PyTorch Lightning Trainer object.
     """
-    exp_name = cfg.exp_name
-    available_gpus = torch.cuda.device_count() or None
-    accelerator = "gpu" if available_gpus else "cpu"
-    devices = available_gpus if available_gpus else 1
-
-    # Set up accelerator and strategy
-    available_gpus = torch.cuda.device_count() or None
-    accelerator = "gpu" if available_gpus else "cpu"
-    devices = available_gpus if available_gpus else 1
-    strategy = (
-        DDPStrategy(find_unused_parameters=True)
-        if devices > 1
-        else SingleDeviceStrategy(device=0)
-    )
     if torch.cuda.is_available():
         torch.set_float32_matmul_precision("high")
 
-    # Set up callbacks
+    accelerator = _get_accelerator()
+    num_gpus = _get_number_of_gpus()
+    strategy = _get_strategy(num_gpus)
+    callbacks = _get_callbacks(cfg)
+    logger = _get_logger(cfg)
+
+    trainer = Trainer(
+        fast_dev_run=2,
+        logger=logger,
+        precision="32-true",
+        accelerator=accelerator,
+        devices=num_gpus,
+        limit_train_batches=None,
+        max_epochs=cfg.get("max_epochs", 100),
+        strategy=strategy,
+        callbacks=callbacks,
+    )
+
+    return trainer
+
+
+def _get_optimizer_params(cfg: Config) -> dict:
+    """Retrieve parameters for AdamW optimizer from the configuration or set defaults.
+    """
+    optimizer_params = cfg.get("optimizer_params", {})
+
+    return {
+        "learning_rate": optimizer_params.get("learning_rate", 1e-4),
+        "weight_decay": optimizer_params.get("weight_decay", 1e-5),
+        "betas": optimizer_params.get("betas", (0.9, 0.98)),
+    }
+
+
+def _get_scheduler_params(cfg: Config) -> dict:
+    """Retrieve parameters for cosine scheduler with warmup from the configuration or set defaults.
+    """
+    scheduler_params = cfg.get("scheduler_params", {})
+    warmup_params = scheduler_params.get("warmup", {})
+    cosine_params = scheduler_params.get("cosine", {})
+
+    return {
+        "warmup": {
+            "start_factor": warmup_params.get("start_factor", 1e-2),
+            "total_iters": warmup_params.get("total_iters", 5),
+        },
+        "cosine": {
+            "T_0": cosine_params.get("T_0", 1),  # Period of the first restart
+            "T_mult": cosine_params.get("T_mult", 2),  # Factor to increase period after each restart
+            "eta_min": cosine_params.get("eta_min", 1e-5),  # Minimum learning rate
+        }
+    }
+
+
+def _get_accelerator() -> str:
+    """Determine and return the type of accelerator ('gpu' or 'cpu').
+    """
+    return "gpu" if torch.cuda.is_available() else "cpu"
+
+
+def _get_number_of_gpus() -> int:
+    """Determine and return the number of available GPUs.
+    """
+    available_gpus = torch.cuda.device_count()
+    return available_gpus or 1
+
+
+def _get_strategy(num_gpus: int) -> Union[DDPStrategy, SingleDeviceStrategy]:
+    """Determine and return the distributed training strategy based on the number of GPUs.
+    """
+    if num_gpus > 1:
+        return DDPStrategy(find_unused_parameters=True)
+    return SingleDeviceStrategy(device=0)
+
+
+def _get_callbacks(cfg: Config) -> List:
+    """Set up callbacks for the trainer.
+    """
+    exp_name = cfg.exp_name
     checkpoint_save_dir = cfg.get("checkpoint_save_dir", CHECKPOINT_SAVE_DIR)
     experiment_checkpoint_dir = os.path.join(checkpoint_save_dir, exp_name)
     os.makedirs(experiment_checkpoint_dir, exist_ok=True)
@@ -265,7 +344,6 @@ def load_trainer(cfg: Config) -> Trainer:
         monitor="val_loss",
         mode="min",
         save_last=True,
-        # every_n_train_steps=250,
         save_on_train_epoch_end=True,
         verbose=True,
     )
@@ -274,40 +352,11 @@ def load_trainer(cfg: Config) -> Trainer:
     )
     learning_rate_callback = LearningRateMonitor(logging_interval="step")
 
-    # Set up logger
-    log_dir = cfg.get("log_dir", LOG_DIR)
-    wandb_logger = WandbLogger(save_dir=log_dir, name=exp_name)
-
-    # Initialize trainer
-    trainer = Trainer(
-        # detect_anomaly=True,
-        fast_dev_run=2,
-        logger=wandb_logger,
-        precision="32-true",
-        accelerator=accelerator,
-        devices=devices,
-        limit_train_batches=None,
-        max_epochs=cfg.get("max_epochs", 100),
-        strategy=strategy,
-        callbacks=[checkpoint_callback, learning_rate_callback, early_stopping_callback],
-    )
-
-    return trainer
+    return [checkpoint_callback, learning_rate_callback, early_stopping_callback]
 
 
-def train(cfg: Config) -> None:
-    """Train a model using the provided configuration.
-
-    Args:
-        cfg (Config): The configuration object containing all parameters.
+def _get_logger(cfg: Config) -> WandbLogger:
+    """Set up the WandB logger for experiment tracking.
     """
-    train_loader, val_loader = prepare_data_loaders(cfg)
-    model = load_model(cfg, train_loader)
-    trainer = load_trainer(cfg)
-
-    trainer.fit(
-        model=model,
-        train_dataloaders=train_loader,
-        val_dataloaders=val_loader,
-        ckpt_path=cfg.get("checkpoint_path") if not cfg.get("load_only_model") else None,
-    )
+    log_dir = cfg.get("log_dir", LOG_DIR)
+    return WandbLogger(save_dir=log_dir, name=cfg.exp_name)

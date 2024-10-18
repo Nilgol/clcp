@@ -5,8 +5,6 @@ and starts the training.
 """
 
 import argparse
-import os
-from datetime import datetime
 
 from config import Config
 from train import train
@@ -56,20 +54,17 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Load a configuration file if provided, update it with any
-    command-line arguments, and then call the `train` function with the configuration.
+    command-line arguments, and then call the `train` function with the provided configuration.
     """
     args = parse_args()
 
-    # Create config dict from config file path or empty dict
     if args.config_path:
         cfg = Config(args.config_path)
     else:
         cfg = Config()
 
-    # Update config dict with command-line arguments
     cfg.update_from_args(args)
 
-    # Start training
     train(cfg)
 
 
