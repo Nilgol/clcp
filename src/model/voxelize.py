@@ -1,3 +1,5 @@
+"""This module provides a standalone voxelization fuction for the MinkUNet encoder-decoder model
+from MMDet3D. The code is extracted verbatim from the MMDet3D codebase."""
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -35,6 +37,7 @@ def sparse_quantize(coords, return_index=False, return_inverse=False):
 
 @torch.no_grad()
 def voxelize(points, voxel_params):
+    """Voxelize a list of point clouds."""
     device = points[0].device  # Assuming all points are on the same device
     voxel_size = torch.tensor(voxel_params["voxel_layer"]["voxel_size"], device=device)
     point_cloud_range = torch.tensor(

@@ -1,31 +1,28 @@
+"""A module that contains the abstract base class for all image encoders."""
+
 from torch import nn
-import timm
+from abc import ABC, abstractmethod
 
 
-class ImageEncoder(nn.Module):
-    def __init__(self, embed_dim=384):
+class ImageEncoder(ABC, nn.Module):
+    """
+    Abstract base class for all image encoders.
+
+    Args:
+        embed_dim (int): The dimension of the output embeddings.
+    """
+
+    def __init__(self, embed_dim: int):
         super().__init__()
-        self.model = timm.create_model(
-            "vit_small_patch16_224",
-            pretrained=True,
-            num_classes=0,
-        )
-        self.projection = nn.Linear(self.model.num_features, embed_dim)
+        self.embed_dim = embed_dim
 
+    @abstractmethod
     def forward(self, x):
-        features = self.model(x)  # Extract features using the ViT model
-        embeddings = self.projection(
-            features
-        )  # Project features to the desired embedding dimension
-        return embeddings
+        """Abstract method for generating embeddings from images.
+        Args:
+            x (torch.Tensor): The input image tensor.
 
-
-if __name__ == "__main__":
-    # Quick sanity check
-
-    import torch
-
-    image_encoder = ImageEncoder()
-    dummy_batch = torch.randn(12, 3, 224, 224)
-    output = image_encoder(dummy_batch)
-    print("Output shape:", output.shape)
+        Returns:
+            torch.Tensor: The image embeddings.
+        """
+        pass

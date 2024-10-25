@@ -1,31 +1,32 @@
-"""A PyTorch Lightning module for contrastive pretraining of pairs of camera images and lidar point clouds.
+"""A PyTorch Lightning module for self-supervised multimodal pretraining.
 """
+
 import os
-from typing import Tuple
+from typing import Dict
 
 import torch
-from torch import nn
+from torch import nn, Tensor
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
 from model.image_encoder import ImageEncoder
 from model.point_cloud_encoder import PointCloudEncoder
 
+
 class ImagePointCloudPretrain(LightningModule):
-    """A module for multimodal self-supervised pretraining.
-    The module takes embeddings from an image and point cloud encoder, respectively,
-    and computes as contrastive loss between them.
-    The module might be extended easily for other modalities or non-contrastive loss functions.
+    """A LightningModule module for aligning an image encoder to a point cloud encoder by optimizing a contrastive
+    loss between image and point cloud embeddings.
+    The point cloud encoder might or might not be frozen during training and the projection head can be either linear
+    or an MLP.
 
     Args:
-        embed_dim (int): Dimension of the image and point cloud embeddings.
+        image_encoder (ImageEncoder): Image encoder module.
+        point_cloud_encoder (PointCloudEncoder): Point cloud encoder module.
         temperature (float): Temperature parameter for the contrastive loss.
         batch_size (int): Batch size for training.
         optimizer_params (dict): Dictionary containing AdamW optimizer parameters.
         scheduler_params (dict): Dictionary containing learning rate scheduler parameters.
-        freeze_point_cloud_encoder (bool): If True, freezes the point cloud encoder during training.
-        projection_type (str): Type of projection head to use, either "linear" or "mlp".
-    
+
     Attributes:
         image_encoder (ImageEncoder): Image encoder module.
         point_cloud_encoder (PointCloudEncoder): Point cloud encoder module.
@@ -34,23 +35,19 @@ class ImagePointCloudPretrain(LightningModule):
         optimizer_params (dict): Dictionary containing AdamW optimizer parameters.
         scheduler_params (dict): Dictionary containing learning rate scheduler
     """
+
     def __init__(
         self,
-        embed_dim,
-        temperature,
-        batch_size,
-        optimizer_params,  # dictionary
-        scheduler_params,  # dictionary
-        freeze_point_cloud_encoder=False,
-        projection_type="linear",
-    ):
+        image_encoder: ImageEncoder,
+        point_cloud_encoder: PointCloudEncoder,
+        temperature: float,
+        batch_size: int,
+        optimizer_params: Dict[str, float],
+        scheduler_params: Dict[str, Dict[str, float]],
+    ) -> None:
         super().__init__()
-        self.image_encoder = ImageEncoder(embed_dim=embed_dim)
-        self.point_cloud_encoder = PointCloudEncoder(
-            embed_dim=embed_dim,
-            freeze_weights=freeze_point_cloud_encoder,
-            projection_type=projection_type,
-        )
+        self.image_encoder = image_encoder
+        self.point_cloud_encoder = point_cloud_encoder
         self.temperature = nn.Parameter(torch.tensor(temperature))
         self.batch_size = batch_size
         self.optimizer_params = optimizer_params
@@ -58,27 +55,27 @@ class ImagePointCloudPretrain(LightningModule):
 
     def configure_optimizers(self):
         """Configure the optimizers and learning rate schedulers based on the provided parameters."""
-        
+
         optimizer = torch.optim.AdamW(
             self.parameters(),
-            lr=self.optimizer_params['learning_rate'],
-            weight_decay=self.optimizer_params['weight_decay'],
-            betas=self.optimizer_params['betas'],
+            lr=self.optimizer_params["learning_rate"],
+            weight_decay=self.optimizer_params["weight_decay"],
+            betas=self.optimizer_params["betas"],
         )
 
-        warmup_length = self.scheduler_params['warmup']['total_iters']
+        warmup_length = self.scheduler_params["warmup"]["total_iters"]
 
         warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             optimizer,
-            start_factor=self.scheduler_params['warmup']['start_factor'],
-            total_iters=warmup_length
+            start_factor=self.scheduler_params["warmup"]["start_factor"],
+            total_iters=warmup_length,
         )
 
         cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            T_0=self.scheduler_params['cosine']['T_0'],
-            T_mult=self.scheduler_params['cosine']['T_mult'],
-            eta_min=self.scheduler_params['cosine']['eta_min'],
+            T_0=self.scheduler_params["cosine"]["T_0"],
+            T_mult=self.scheduler_params["cosine"]["T_mult"],
+            eta_min=self.scheduler_params["cosine"]["eta_min"],
         )
 
         scheduler = torch.optim.lr_scheduler.SequentialLR(
@@ -93,7 +90,7 @@ class ImagePointCloudPretrain(LightningModule):
             "monitor": "val_loss",
         }
 
-    def contrastive_loss(self, image_embeddings, lidar_embeddings):
+    def contrastive_loss(self, image_embeddings: Tensor, lidar_embeddings: Tensor) -> Tensor:
         """Compute the contrastive loss of normalized image and point cloud embeddings."""
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
         lidar_embeddings = F.normalize(lidar_embeddings, p=2, dim=-1)
