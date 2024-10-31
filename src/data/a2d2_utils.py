@@ -1,17 +1,62 @@
+"""Some utility functions used in the A2D2 dataset class, most are extracted from the official
+A2D2 dataset tutorial notebook."""
+from typing import Tuple, Any
 import json
-import random
-from PIL import Image
 import numpy as np
-import numpy.linalg as la
 import cv2
 
+def random_crop(image: np.ndarray, combined_points: np.ndarray, crop_size: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray]:
+    """Randomly crops an image and filters its associated point cloud to match the cropped area.
 
+    Args:
+        image (np.ndarray): The input image to be cropped, with shape (H, W, 3).
+        combined_points (np.ndarray): An array representing point cloud data associated with the image.
+            Shape is (num_points, 6), where columns represent x, y, z coordinates, reflectance, and
+            pixel row and column indices within the original image.
+        crop_size (Tuple[int, int]): The dimensions (width, height) of the crop.
+
+    Raises:
+        ValueError: If `crop_size` is larger than the `image` dimensions.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: A tuple containing:
+            - cropped_image (np.ndarray): The randomly cropped image with shape (crop_height, crop_width, 3).
+            - new_points (np.ndarray): Filtered point cloud data within the cropped region, with adjusted row
+              and column indices.
+    """
+    height, width, _ = image.shape
+    crop_width, crop_height = crop_size
+
+    if crop_width > width or crop_height > height:
+        raise ValueError("Crop size must be smaller than image size")
+
+    left = np.random.randint(0, width - crop_width)
+    upper = np.random.randint(0, height - crop_height)
+
+    cropped_image = image[upper : upper + crop_height, left : left + crop_width, :]
+
+    mask = (
+        (combined_points[:, 4] >= upper)
+        & (combined_points[:, 4] < upper + crop_height)
+        & (combined_points[:, 5] >= left)
+        & (combined_points[:, 5] < left + crop_width)
+    )
+
+    new_points = combined_points[mask]
+    new_points[:, 4] -= upper
+    new_points[:, 5] -= left
+
+    return cropped_image, new_points
+
+# From the official A2D2 dataset tutorial notebook
 def load_config(config_path):
+    """Load the A2D2 dataset configuration file."""
     with open(config_path, "r") as f:
         return json.load(f)
 
-
+# From the official A2D2 dataset tutorial notebook
 def undistort_image(image, cam_name, config):
+    """Undistort an image using the camera parameters from the A2D2 dataset configuration file."""
     if cam_name in [
         "front_left",
         "front_center",
@@ -30,7 +75,7 @@ def undistort_image(image, cam_name, config):
             return cv2.fisheye.undistortImage(
                 image, intr_mat_dist, D=dist_parms, Knew=intr_mat_undist
             )
-        elif lens == "Telecam":
+        if lens == "Telecam":
             return cv2.undistort(
                 image,
                 intr_mat_dist,
@@ -43,50 +88,36 @@ def undistort_image(image, cam_name, config):
         return image
 
 
-def random_crop(image, combined_points, crop_size):
-    # Random crop image and reduce point cloud accordingly
-    height, width, _ = image.shape
-    crop_width, crop_height = crop_size
+### The following funtions are for testing purposes only
 
-    if crop_width > width or crop_height > height:
-        raise ValueError("Crop size must be smaller than image size")
+def collect_point_retention_ratios(dataset: Any, num_samples: int) -> np.ndarray:
+    """Collects the ratio of points retained in each point cloud after random cropping.
 
-    left = np.random.randint(0, width - crop_width)
-    upper = np.random.randint(0, height - crop_height)
+    This function randomly samples point clouds from the provided dataset, applies random cropping, 
+    and calculates the ratio of points retained in the cropped region to the original number of points.
 
-    cropped_image = image[upper : upper + crop_height, left : left + crop_width, :]
+    Args:
+        dataset (A2D2Dataset): A dataset object that supports indexing and returns an image and point
+            cloud tensor. Each entry in `dataset.data_pairs` contains the file path to the original
+            point cloud.
+        num_samples (int): The number of samples to collect for calculating retention ratios.
 
-    # Reduce point cloud
-    mask = (
-        (combined_points[:, 4] >= upper)
-        & (combined_points[:, 4] < upper + crop_height)
-        & (combined_points[:, 5] >= left)
-        & (combined_points[:, 5] < left + crop_width)
-    )
-
-    new_points = combined_points[mask]
-    new_points[:, 4] -= upper
-    new_points[:, 5] -= left
-
-    return cropped_image, new_points
-
-
-## The following funtions are for testing purposes only
-
-
-def collect_point_retention_ratios(dataset, num_samples):
+    Returns:
+        np.ndarray: An array of shape (num_samples,) containing the retention ratio of points for each sample.
+    """
     ratios = np.zeros(num_samples)
     for i in range(num_samples):
         idx = np.random.randint(0, len(dataset))
-        image_tensor, points_tensor = dataset[idx]
+        _, points_tensor = dataset[idx]
         original_num_points = np.load(dataset.data_pairs[idx][0])["points"].shape[0]
         points_retained_ratio = points_tensor.shape[0] / original_num_points
         ratios[i] = points_retained_ratio
         print(i + 1)
     return ratios
 
-
+# From the official A2D2 dataset tutorial notebook
 def map_lidar_points_onto_image(image_orig, lidar, pixel_size=3, pixel_opacity=1):
+    """Project lidar points to the corresponding camera image."""
     image = np.copy(image_orig)
 
     # get rows and cols
@@ -117,8 +148,9 @@ def map_lidar_points_onto_image(image_orig, lidar, pixel_size=3, pixel_opacity=1
         ) + pixel_opacity * 255 * colours[i]
     return image.astype(np.uint8)
 
-
+# From the official A2D2 dataset tutorial notebook
 def hsv_to_rgb(h, s, v):
+    """Convert HSV to RGB."""
     if s == 0.0:
         return v, v, v
 

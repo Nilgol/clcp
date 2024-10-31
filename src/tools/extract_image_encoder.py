@@ -1,16 +1,21 @@
-import torch
-
+"""A script to extract the image encoder weights from a pretrained checkpoint for finetuning."""
 import os
 import glob
 
+import torch
+
+CKPT_SOURCE_PATH = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp46_b256_lr1e-3_wd1e-2_wu5_etamin1e-5_linear_unfreeze/exp46_b256_lr1e-3_wd1e-2_wu5_etamin1e-5_linear_unfreeze_epoch=05_val_loss=4.73.ckpt"
+CKPT_SOURCE_DIR = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints"
+EXP_NAME = "exp46_b256_epoch05"
+CKPT_TARGET_DIR = "/homes/math/golombiewski/workspace/data/models"
 
 def find_checkpoint_file(exp, epoch, base_checkpoint_dir):
-    # Construct the pattern to search for files containing the epoch number
+    # Construct pattern to search for files containing the epoch number
     exp_pattern = f"exp{exp}*"
     epoch_pattern = f"*epoch={epoch}_*.ckpt"
     search_path = os.path.join(base_checkpoint_dir, exp_pattern, epoch_pattern)
 
-    # Use glob to find files matching the pattern
+    # Find files matching the pattern
     matching_files = glob.glob(search_path)
 
     if len(matching_files) == 0:
@@ -20,13 +25,13 @@ def find_checkpoint_file(exp, epoch, base_checkpoint_dir):
             f"Multiple checkpoint files found for epoch {epoch} in {search_path}. Using the first one."
         )
 
-    # Return the first matching file (assuming you want to use the first match)
+    # Return the first matching file
     return matching_files[0]
 
 
 def extract_weights_for_experiments(experiments, epochs):
-    base_checkpoint_dir = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/"
-    output_dir = "/homes/math/golombiewski/workspace/data/models/"
+    base_checkpoint_dir = CKPT_SOURCE_DIR
+    output_dir = CKPT_TARGET_DIR
 
     for exp in experiments:
         for epoch in epochs:
@@ -67,9 +72,9 @@ def extract_timm_weights_from_checkpoint(checkpoint_path, output_path):
 
 
 if __name__ == "__main__":
-    source_path = "/homes/math/golombiewski/workspace/fast/clcl/checkpoints/exp46_b256_lr1e-3_wd1e-2_wu5_etamin1e-5_linear_unfreeze/exp46_b256_lr1e-3_wd1e-2_wu5_etamin1e-5_linear_unfreeze_epoch=05_val_loss=4.73.ckpt"
-    exp_name = "exp46_b256_epoch05"
-    target_path = f"/homes/math/golombiewski/workspace/data/models/{exp_name}.pth"
+    source_path = CKPT_SOURCE_PATH
+    exp_name = EXP_NAME
+    target_path = f"{CKPT_TARGET_DIR}/{exp_name}.pth"
     extract_timm_weights_from_checkpoint(source_path, target_path)
 
     # experiments = [46]

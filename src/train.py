@@ -173,7 +173,7 @@ def _get_point_cloud_encoder_params(cfg: Config) -> dict:
     encoder_params = cfg.get("point_cloud_encoder_params", {})
 
     return {
-        "embed_dim": encoder_params.get("embed_dim", 384),
+        "embed_dim": cfg.get("embed_dim", 384),
         "freeze_encoder_weights": encoder_params.get("freeze_encoder_weights", False),
         "projection_type": encoder_params.get("projection_type", "linear"),
     }

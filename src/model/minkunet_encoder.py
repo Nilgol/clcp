@@ -10,8 +10,8 @@ from model.point_cloud_encoder import PointCloudEncoder
 from model.voxelize import voxelize
 
 # Those usually don't change between once, so set them once here.
-CONFIG_PATH = "/homes/math/golombiewski/workspace/mmdetection3d/configs/minkunet/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti.py"
-CHECKPOINT_PATH = "/homes/math/golombiewski/workspace/clcl/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth"
+CONFIG_PATH = "/homes/math/golombiewski/workspace/clcl/src/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti.py"
+CHECKPOINT_PATH = "/homes/math/golombiewski/workspace/clcl/src/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth"
 
 class MinkUNetEncoder(PointCloudEncoder):
     def __init__(self, embed_dim=384, freeze_encoder_weights=False, projection_type="linear"):
