@@ -2,16 +2,19 @@
 Adjust the config and checkpoint paths here, or provide them via a config file for flexibility.
 """
 from typing import List
+from pathlib import Path
+
 import torch
 from torch import nn, Tensor
 from mmdet3d.apis import init_model
 from torch_scatter import scatter_mean
+
 from model.point_cloud_encoder import PointCloudEncoder
 from model.voxelize import voxelize
 
-# Those usually don't change between once, so set them once here.
-CONFIG_PATH = "/homes/math/golombiewski/workspace/clcl/src/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti.py"
-CHECKPOINT_PATH = "/homes/math/golombiewski/workspace/clcl/src/model/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth"
+# Relative paths assuming the script is run from the root directory
+CONFIG_PATH = str(Path(__file__).parent / "minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti.py")
+CHECKPOINT_PATH = str(Path(__file__).parent / "minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth")
 
 class MinkUNetEncoder(PointCloudEncoder):
     def __init__(self, embed_dim=384, freeze_encoder_weights=False, projection_type="linear"):

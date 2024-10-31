@@ -6,19 +6,22 @@ import glob
 import os
 import pickle
 from typing import List, Tuple
+from pathlib import Path
+
 import numpy as np
 import cv2
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import torch
 from torch.utils.data import Dataset
+
 from data.a2d2_utils import load_config, undistort_image, random_crop
 
 # Filepaths not set via configuration. Set them here once.
 A2D2_ROOT_PATH = "/homes/math/golombiewski/workspace/data/A2D2"
 A2D2_CONFIG_PATH = "/homes/math/golombiewski/workspace/data/A2D2_general/cams_lidars.json"
-MISSING_KEYS_FILE = "/homes/math/golombiewski/workspace/clcl/src/data/missing_keys_files.pkl"
-MISSING_POINT_CLOUDS_FILE = "/homes/math/golombiewski/workspace/clcl/src/data/empty_point_clouds.pkl"
+MISSING_KEYS_FILE = str(Path(__file__).parent / "missing_keys_files.pkl")
+MISSING_POINT_CLOUDS_FILE = str(Path(__file__).parent / "empty_point_clouds.pkl")
 
 class A2D2Dataset(Dataset):
     """A PyTorch Dataset for loading and processing the A2D2 dataset.
