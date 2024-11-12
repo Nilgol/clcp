@@ -1,0 +1,14 @@
+name: lidar2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pytorch
+  - torchvision
+  - pytorch-cuda=12.1
+  - ca-certificates
+  - openssl
+  - ninja
+  - certifi
+  - pytorch-scatter
+prefix: /net/work/golombiewski/miniforge3/envs/lidar2
