@@ -41,3 +41,20 @@ The above base environment also works for the finetuning/eval pipeline, but in o
 
 ### Pretraining
 
+1. Before performing pretraining, set the (constant) data paths in `pretrain/train.py`
+
+2. Download any necessary checkpoints. For the MinkUNet point cloud encoder, the assumed checkpoint path is `pretrain/model/` and the checkpoint we used can be downloaded here:
+https://download.openmmlab.com/mmdetection3d/v1.1.0_models/minkunet/minkunet34_w32_torchsparse_8xb2-amp-laser-polar-mix-3x_semantickitti_20230512_233511-bef6cad0.pth
+
+
+3. Training parameters can be set via configuration file (.py or .yml format), an example can be found under `pretrain/configs/base_config.py`, or via command-line arguments (see `pretrain/main.py`)
+
+4. After activating the respective environment, run
+`pretrain/main.py` 
+
+### Finetuning and Evaluation
+
+All finetuning and evaluation is performed with MMSegmentation so we refer to their usage instructions. 
+Base configuration files for finetuning and evaluation, respectively, are located in
+`finetune_eval/mmsegmentation/configs/clcl/segmenter_mask_cityscapes.py`
+`finetune_eval/mmsegmentation/configs/clcl/segmenter_mask_acdc.py`
