@@ -5,9 +5,9 @@ This repository accompanies the master's thesis *Domain Generalization for Visio
 
 The thesis, including an abstract, as well as some presentation slides are included in the repository.
 
-The source code is split into two distinct pipelines:
+The source code is split into two pipelines:
 - **Pretraining Pipeline**: Developed using PyTorch Lightning. This pipeline is used for multimodal pretraining by aligning an image encoder with a point cloud encoder via a contrastive loss. 
-- **Fine-tuning and Evaluation Pipeline**: Utilizes the MMSegmentation and MMPretrain framework from OpenMMLab. This pipeline is used to finetune the pretrained image encoder for semantic segmentation, then to evaluate performace under distribution shift.
+- **Finetuning and Evaluation Pipeline**: Utilizes the MMSegmentation and MMPretrain framework from OpenMMLab. This pipeline is used to finetune the pretrained image encoder for semantic segmentation, then to evaluate performace under distribution shift.
 
 ## Project Structure
 
