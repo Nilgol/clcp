@@ -54,7 +54,12 @@ https://download.openmmlab.com/mmdetection3d/v1.1.0_models/minkunet/minkunet34_w
 
 ### Finetuning and Evaluation
 
-All finetuning and evaluation is performed with MMSegmentation so we refer to their usage instructions. 
+All finetuning and evaluation is performed with MMSegmentation so we refer to their usage instructions.
+
 Base configuration files for finetuning and evaluation, respectively, are located in
 `finetune_eval/mmsegmentation/configs/clcl/segmenter_mask_cityscapes.py`
 `finetune_eval/mmsegmentation/configs/clcl/segmenter_mask_acdc.py`
+
+The script in
+`pretrain/tools/extract_image_encoder.py`
+can be used to extract the weights from path files obtained by the pretraining pipeline.
