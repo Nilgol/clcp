@@ -1,4 +1,4 @@
-name: lidar2
+name: pretrain
 channels:
   - pyg
   - pytorch
@@ -361,4 +361,4 @@ dependencies:
       - yapf==0.40.2
       - yarl==1.9.4
       - zipp==3.19.2
-prefix: /net/work/golombiewski/miniforge3/envs/lidar2
+prefix: /net/work/golombiewski/miniforge3/envs/pretrain

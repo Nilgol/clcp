@@ -1,4 +1,4 @@
-name: lidar2
+name: pretrain
 channels:
   - conda-forge
 dependencies:
@@ -11,4 +11,4 @@ dependencies:
   - ninja
   - certifi
   - pytorch-scatter
-prefix: /net/work/golombiewski/miniforge3/envs/lidar2
+prefix: /net/work/golombiewski/miniforge3/envs/pretrain

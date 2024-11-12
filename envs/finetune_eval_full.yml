@@ -1,4 +1,4 @@
-name: openmmlab
+name: finetune_eval
 channels:
   - pytorch
   - nvidia
@@ -214,4 +214,4 @@ dependencies:
       - wandb==0.17.7
       - werkzeug==3.0.2
       - yapf==0.40.2
-prefix: /net/work/golombiewski/miniforge3/envs/openmmlab
+prefix: /net/work/golombiewski/miniforge3/envs/finetune_eval

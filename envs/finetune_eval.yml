@@ -1,4 +1,4 @@
-name: openmmlab
+name: finetune_eval
 channels:
   - conda-forge
 dependencies:
@@ -15,4 +15,4 @@ dependencies:
   - timm
   - plotly
   - seaborn
-prefix: /net/work/golombiewski/miniforge3/envs/openmmlab
+prefix: /net/work/golombiewski/miniforge3/envs/finetune_eval
