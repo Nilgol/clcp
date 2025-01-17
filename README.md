@@ -1,15 +1,27 @@
 
-# CLCL - Camera-Lidar Contrastive Learning
+# CLCP - Camera-Lidar Contrastive Pretraining
 
 This repository accompanies the master's thesis *Domain Generalization for Vision Perception Models by Camera-Lidar Contrastive Learning* (by Nils Golombiewski, TU Berlin, August 2024) and contains all relevant code used for experiments.
 
 The thesis, including an abstract, as well as some presentation slides are included in the repository.
 
+## Thesis Description
+
+The thesis aims to demonstrate improved domain generalization of image encoders in an autonomous driving setting by pretraining the image encoder for alignment with a lidar point cloud encoder via a contrastive loss. The approach mirrors OpenAI's CLIP model for vision-language pretraining, but for the two vision domains of camera images and lidar point clouds.
+
+The method did not produce significant effects on domain generalization, evaluated as semantic segmentation performance after distribution shift. In the contrary: We observe an overall decline in segmentation performance with improved alignment between camera images and corresponding lidar point cloud data.
+
+We suggest that this effect is mainly due to two reasons:
+1. The alignment between images and point clouds lacks an effective training signal with respect to the semantic segmentation task.
+2. Our pretraining dataset lacks the scale and diversity required to improve domain generalization as exhibited by state of the art vision-language models.
+
+Whether multimodal self-supervised methods can actually improve performance compared to standard unimodal supervised methods, specifically with regards to domain generalization, remains an open question.
+
+## Project Structure
+
 The source code is split into two pipelines:
 - **Pretraining Pipeline**: Developed using PyTorch Lightning. This pipeline is used for multimodal pretraining by aligning an image encoder with a point cloud encoder via a contrastive loss. 
 - **Finetuning and Evaluation Pipeline**: Utilizes the MMSegmentation and MMPretrain framework from OpenMMLab. This pipeline is used to finetune the pretrained image encoder for semantic segmentation, then to evaluate performace under distribution shift.
-
-## Project Structure
 
 - `pretrain/`: Contains pretraining pipeline source code.
 - `finetune_eval/`: Contains source code alterations and configuration files for MMSegmentation and MMPretrain.
