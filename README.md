@@ -1,7 +1,7 @@
 
 # CLCP - Camera-Lidar Contrastive Pretraining
 
-This repository accompanies the master's thesis *Domain Generalization for Vision Perception Models by Camera-Lidar Contrastive Learning* (by Nils Golombiewski, TU Berlin, August 2024) and contains all relevant code used for experiments.
+This repository accompanies the master's thesis *Domain Generalization for Vision Perception Models by Camera-Lidar Contrastive Learning* (TU Berlin, August 2024) and contains all relevant code used for experiments.
 
 The thesis, including an abstract, as well as some presentation slides are included in the repository.
 
