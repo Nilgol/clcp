@@ -7,7 +7,7 @@ The thesis, including an abstract, as well as some presentation slides are inclu
 
 ## Thesis Description
 
-The thesis aims to demonstrate improved domain generalization of image encoders in an autonomous driving setting by pretraining the image encoder for alignment with a lidar point cloud encoder via a contrastive loss. The approach mirrors OpenAI's CLIP model for vision-language pretraining, but for the two vision domains of camera images and lidar point clouds.
+The thesis aims to demonstrate improved domain generalization of image encoders in an autonomous driving setting by pretraining the image encoder for alignment with a lidar point cloud encoder via a contrastive loss. The approach mirrors OpenAI's CLIP model for vision-language pretraining, but for two vision modalities: camera images and lidar point clouds.
 
 The method did not produce significant effects on domain generalization, evaluated as semantic segmentation performance after distribution shift. In the contrary: We observe an overall decline in segmentation performance with improved alignment between camera images and corresponding lidar point cloud data.
 
