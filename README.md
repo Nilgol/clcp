@@ -7,9 +7,12 @@ The thesis, including an abstract, as well as some presentation slides are inclu
 
 ## Thesis Description
 
-The thesis aims to demonstrate improved domain generalization of image encoders in an autonomous driving setting by pretraining the image encoder for alignment with a lidar point cloud encoder via a contrastive loss. The approach mirrors OpenAI's CLIP model for vision-language pretraining, but for two vision modalities: camera images and lidar point clouds.
+The thesis aims to demonstrate improved domain generalization of image encoders in an autonomous driving setting by pretraining the image encoder for alignment with a lidar point cloud encoder via a contrastive loss. The idea is inspired by the recently shown domain generalization performance of vision-language models and based on the hypothesis that alignment to a domain-robust co-modality during pretraining might yield an advantage in domain generalization. 
+The approach mirrors OpenAI's CLIP model for vision-language pretraining, but for two vision modalities: camera images and lidar point clouds.
 
-The method did not produce significant effects on domain generalization, evaluated as semantic segmentation performance after distribution shift. In the contrary: We observe an overall decline in segmentation performance with improved alignment between camera images and corresponding lidar point cloud data.
+We use image encoders after conventional supervised pretraining on ImageNet as a baseline, apply finetuning for the task of semantic segmentation on A2D2 autonomous driving dataset and evaluate domain generalization for the same task, but after distribution shift on the adverse conditions dataset ACDC without further finetuning.
+
+We report no significant improvement of multimodal lidar-camera pretraining on domain generalization. In the contrary: We observe an overall decline in segmentation performance, before and after distribution shift, with improved alignment between camera images and corresponding lidar point cloud data.
 
 We suggest that this effect is mainly due to two reasons:
 1. The alignment between images and point clouds lacks an effective training signal with respect to the semantic segmentation task.
