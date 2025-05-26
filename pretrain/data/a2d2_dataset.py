@@ -18,8 +18,8 @@ from torch.utils.data import Dataset
 from data.a2d2_utils import load_config, undistort_image, random_crop
 
 # Default paths for A2D2 dataset and its configuration file
-A2D2_ROOT_PATH = "/homes/math/golombiewski/workspace/data/A2D2"
-A2D2_CONFIG_PATH = "/homes/math/golombiewski/workspace/data/A2D2_general/cams_lidars.json"
+A2D2_ROOT_PATH = "/homes/math/<me>/workspace/data/A2D2"
+A2D2_CONFIG_PATH = "/homes/math/<me>/workspace/data/A2D2_general/cams_lidars.json"
 
 # Paths to files listing samples with missing keys or point clouds
 MISSING_KEYS_FILE = str(Path(__file__).parent / "missing_keys_files.pkl")
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     train_set = A2D2Dataset(crop_size=(crop, crop), val_ratio=0.1, split="train", augment=False)
     val_set = A2D2Dataset(crop_size=(crop, crop), val_ratio=0.1, split="val", augment=False)
     num_samples = 200
-    output_dir = "/homes/math/golombiewski/workspace/fast/crop_resized_images"
+    output_dir = "/homes/math/<me>/workspace/fast/crop_resized_images"
     os.makedirs(output_dir, exist_ok=True)
 
     def denormalize_image(tensor, mean, std):
